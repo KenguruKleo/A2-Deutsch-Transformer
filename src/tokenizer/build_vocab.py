@@ -1129,7 +1129,7 @@ def _extract_pdf_words() -> list[str]:
     import re
     from collections import Counter
 
-    pdf_path = Path("data_raw/Begegnungen_А2.pdf")
+    pdf_path = Path(__file__).parent.parent.parent / "data_raw" / "Begegnungen_А2.pdf"
     if not pdf_path.exists():
         print("  ⚠️  PDF not found — skipping PDF word extraction")
         return []
@@ -1189,7 +1189,8 @@ if __name__ == "__main__":
     if "--stats" in sys.argv:
         print_stats(vocab)
     else:
-        # Зберігаємо у файл
-        with open("vocab.json", "w", encoding="utf-8") as f:
+        # Зберігаємо у файл (поруч зі скриптом)
+        save_path = Path(__file__).parent / "vocab.json"
+        with open(save_path, "w", encoding="utf-8") as f:
             json.dump(vocab, f, ensure_ascii=False, indent=2)
         print(f"✅ vocab.json saved — {len(vocab)} tokens")

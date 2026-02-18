@@ -74,16 +74,12 @@ class Tokenizer:
     EOS_TOKEN = "<EOS>"
     UNK_TOKEN = "<UNK>"
 
-    def __init__(self, vocab_path: str | Path = "vocab.json"):
-        """Завантажує словник з JSON-файлу.
-
-        Args:
-            vocab_path: шлях до vocab.json (token → id)
-
-        Внутрішня структура:
-            self.token_to_id: {"ich": 60, "bin": 155, ...}  — для encode
-            self.id_to_token: {60: "ich", 155: "bin", ...}  — для decode
-        """
+    def __init__(self, vocab_path: str | Path | None = None):
+        """Завантажує словник з JSON-файлу."""
+        if vocab_path is None:
+            # Шукаємо у тій же директорії, де лежить цей скрипт
+            vocab_path = Path(__file__).parent / "vocab.json"
+        
         vocab_path = Path(vocab_path)
         if not vocab_path.exists():
             raise FileNotFoundError(
