@@ -1,0 +1,34 @@
+# ── A2 Deutsch Grammar Tutor ── Model & Training Config ──
+
+model:
+  vocab_size: 2000        # V — curated word-level tokens (A2 forms)
+  max_seq_len: 64         # T — context window
+  d_model: 128            # embedding / hidden dimension
+  n_layers: 4             # L — decoder blocks
+  n_heads: 4              # H — attention heads  (d_head = d_model / H = 32)
+  d_ff: 512               # feed-forward inner dim (4 × d_model)
+  dropout: 0.1
+  weight_tying: true      # share embedding ↔ LM-head weights
+
+training:
+  epochs: 10
+  batch_size: 64
+  grad_accum_steps: 4           # effective batch = 64 × 4 = 256
+  learning_rate: 3.0e-4
+  weight_decay: 0.01
+  warmup_steps: 200
+  max_grad_norm: 1.0
+  fp16: true                    # mixed-precision (AMP)
+  seed: 42
+  save_every_epoch: true
+  checkpoint_dir: "checkpoints"
+
+data:
+  train_file: "data/train.jsonl"
+  val_file: "data/val.jsonl"
+  instruction: "You are a German A2 tutor. Check the sentence. If it is wrong, correct it and explain simply."
+
+generation:
+  temperature: 0.7
+  top_k: 50
+  max_new_tokens: 64
