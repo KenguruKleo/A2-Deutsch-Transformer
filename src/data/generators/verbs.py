@@ -101,3 +101,27 @@ class VerbGenerator(BaseGenerator):
                     "output": f"❌ Incorrect.\n✅ Correct: {sub_key.capitalize()} {m_form} {phrase}.\n📝 Пояснення: У реченнях з модальним дієсловом ('{m_form}') основне дієслово ('{v_inf}') має стояти в самому кінці речення в інфінітиві."
                 })
         return data
+
+    def generate_separable_verbs(self, count=1000):
+        """A2: Separable verbs (aufstehen, einkaufen) - prefix position in Präsens."""
+        verbs = [
+            ("aufstehen", "steh", "auf", "um 7 Uhr"),
+            ("einkaufen", "kauf", "ein", "im Supermarkt"),
+            ("anrufen", "ruf", "an", "meine Mutter")
+        ]
+        data = []
+        for _ in range(count):
+            sub_key = random.choice(list(self.subjects.keys()))
+            inf, stem, prefix, extra = random.choice(verbs)
+            v_form = self.get_verb_form(stem, sub_key)
+            
+            # Correct: Ich stehe um 7 Uhr auf.
+            # Wrong: Ich aufstehe um 7 Uhr.
+            correct = f"{sub_key.capitalize()} {v_form} {extra} {prefix}."
+            wrong = f"{sub_key.capitalize()} {prefix}{v_form} {extra}."
+            
+            data.append({
+                "input": wrong,
+                "output": f"❌ Incorrect.\n✅ Correct: {correct}\n📝 Пояснення: Дієслово '{inf}' є відокремлюваним. У теперішньому часі приставка '{prefix}' має стояти в самому кінці речення."
+            })
+        return data

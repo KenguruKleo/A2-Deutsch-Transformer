@@ -40,3 +40,40 @@ class CaseGenerator(BaseGenerator):
                 "output": f"❌ Incorrect.\n✅ Correct: {sub_key.capitalize()} {v_form} {c_art} {noun}.\n📝 Пояснення: Дієслово '{v_inf}' завжди вимагає Dativ. Тому артикль для {gender}-роду має бути '{c_art}'."
             })
         return data
+
+    def generate_prepositions_akk_dat(self, count=1000):
+        """A2: Wechselpräpositionen (Wohin? + Akk / Wo? + Dat)."""
+        scenarios = [
+            ("gehe", "in", "Kino", "n", "Akkusativ", "das", "dem", "Куди? (двигун)"),
+            ("bin", "in", "Kino", "n", "Dativ", "dem", "das", "Де? (статика)"),
+            ("lege", "на", "Tisch", "m", "Akkusativ", "den", "dem", "Куди?"),
+            ("liegt", "на", "Tisch", "m", "Dativ", "dem", "den", "Де?")
+        ]
+        # Adjust 'на' to 'auf' for German output
+        data = []
+        for _ in range(count):
+            sub_key = random.choice(list(self.subjects.keys()))
+            v, prep_name, noun, gender, case, c_art, w_art, logic = random.choice(scenarios)
+            prep = "auf" if prep_name == "на" else "in"
+            
+            data.append({
+                "input": f"{sub_key.capitalize()} {v} {prep} {w_art} {noun}.",
+                "output": f"❌ Incorrect.\n✅ Correct: {sub_key.capitalize()} {v} {prep} {c_art} {noun}.\n📝 Пояснення: Прийменник '{prep}' у значенні '{logic}' вимагає {case}. Для {gender}-роду це '{c_art}'."
+            })
+        return data
+
+    def generate_adjective_endings(self, count=1000):
+        """A2: Basic adjective endings after 'ein' (mixed declension)."""
+        adjectives = [("gut", "er", "m"), ("neu", "es", "n"), ("schön", "e", "f")]
+        nouns = {"m": "Mann", "n": "Auto", "f": "Frau"}
+        
+        data = []
+        for _ in range(count):
+            adj, ending, gender = random.choice(adjectives)
+            noun = nouns[gender]
+            
+            data.append({
+                "input": f"Das ist ein {adj} {noun}.",
+                "output": f"❌ Incorrect.\n✅ Correct: Das ist ein {adj}{ending} {noun}.\n📝 Пояснення: Після неозначеного артикля 'ein' у Nominativ прикметник '{adj}' для {gender}-роду отримує закінчення '-{ending}'."
+            })
+        return data
