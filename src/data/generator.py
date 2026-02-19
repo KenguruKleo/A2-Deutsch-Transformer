@@ -1,6 +1,7 @@
 import json
 import random
 from pathlib import Path
+from src.config import load_config
 
 class A2SmartGenerator:
     """Розумний генератор для створення великої кількості A2 прикладів."""
@@ -18,7 +19,7 @@ class A2SmartGenerator:
             "ihr": {"bin": "seid", "habe": "habt", "ending": "t"},
         }
         
-        self.time_adv = ["Heute", "Morgen", "Dann", "Jetzt", "Am Montag", "Nach та роботи"]
+        self.time_adv = ["Heute", "Morgen", "Dann", "Jetzt", "Am Montag", "Nach der Arbeit"]
         self.places = ["nach Hause", "nach Berlin", "ins Kino", "in die Schule", "zum Arzt"]
         self.foods = ["Pizza", "Brot", "Eis", "Kaffee", "Apfel"]
         
@@ -112,9 +113,10 @@ class A2SmartGenerator:
         print(f"🚀 Сгенеровано {len(data)} прикладів у {path}")
 
 if __name__ == "__main__":
+    config = load_config()
     generator = A2SmartGenerator()
     data = generator.generate_all()
-    # Розділимо на навчання та валідацію (90/10)
+    # Split into training and validation (90/10)
     split = int(len(data) * 0.9)
-    generator.save(data[:split], "data/train.jsonl")
-    generator.save(data[split:], "data/val.jsonl")
+    generator.save(data[:split], config.data.train_path)
+    generator.save(data[split:], config.data.val_path)

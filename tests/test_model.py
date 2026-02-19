@@ -6,12 +6,20 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 from src.model.model import TransformerModel
+from src.config import load_config
 
 def test_model_dimensions():
     print("🚀 Test 1: Checking output dimensions...")
     
-    # Parameters as in our config
-    v, t, d, h, l, f = 4000, 64, 128, 4, 4, 512
+    # Load config instead of hardcoding
+    config = load_config()
+    v = config.model.vocab_size
+    t = config.model.max_seq_len
+    d = config.model.d_model
+    h = config.model.n_heads
+    l = config.model.n_layers
+    f = config.model.d_ff
+    
     batch_size = 2
     
     model = TransformerModel(v, t, d, h, l, f)
@@ -40,7 +48,10 @@ def test_device_compatibility():
     
     print(f"Using device: {device}")
     
-    v, t, d, h, l, f = 4000, 64, 128, 4, 4, 512
+    config = load_config()
+    v, t, d = config.model.vocab_size, config.model.max_seq_len, config.model.d_model
+    h, l, f = config.model.n_heads, config.model.n_layers, config.model.d_ff
+    
     model = TransformerModel(v, t, d, h, l, f).to(device)
     
     dummy_input = torch.randint(0, v, (4, t)).to(device)

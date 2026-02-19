@@ -26,6 +26,10 @@ import json
 import sys
 from pathlib import Path
 
+# Add project root to sys.path
+sys.path.append(str(Path(__file__).parent.parent.parent))
+from src.config import load_config
+
 def build_vocab() -> dict[str, int]:
     """Збирає все в один великий словник: token → id."""
     tokens: list[str] = []
@@ -545,26 +549,29 @@ def build_vocab() -> dict[str, int]:
 
     # ─── 14. Слова для пояснень тьютора (50) ──────────────
     tutor_words_ua = [
+        "\n",
         # Українські слова для пояснень
         "Пояснення", "Пояснення:",
         "Правильно", "Неправильно",
         "Речення", "правильне", "неправильне",
         "Помилка", "помилка",
         "Тут", "тут", "треба", "потрібно",
-        "використовувати", "вживати", "вживається",
-        "замість", "бо",
-        "дієслово", "артикль", "іменник", "прийменник",
-        "форма", "форму",
+        "використовувати", "вживати", "вживається", "використовуємо",
+        "замість", "бо", "від", "не", "в", "а", "з",
+        "дієслово", "артикль", "іменник", "прийменник", "Дієслово",
+        "форма", "форму", "означає", "рух", "тому",
         "Dativ", "Akkusativ", "Nominativ",
         "Perfekt", "Präsens", "Präteritum",
         "Partizip", "II",
-        "допоміжне", "основне",
+        "допоміжне", "основне", "допоміжного",
         "після", "перед", "наприкінці",
+        "минулому", "часі",
         "порядок", "слів", "позиція",
         "відокремлювана", "приставка",
         "mit", "sein", "haben",  # дублі OK — їх відфільтруємо
-        "вимагає", "керує",
-        "У", "реченні", "Correct:", "Incorrect:",
+        "вимагає", "керує", "потребує",
+        "У", "реченні", "Коли", "починається", "має", "стояти", "на", "другому", "місці", "перед", "підметом",
+        "Correct:", "Incorrect:",
     ]
     tokens.extend(tutor_words_ua)
 
@@ -1100,14 +1107,15 @@ def build_vocab() -> dict[str, int]:
             seen.add(t)
             unique_tokens.append(t)
 
-    # Цільовий розмір: V = 4000
-    # Якщо менше — додаємо зарезервовані токени
-    TARGET_V = 4000
+    # Target size: V from config
+    config = load_config()
+    TARGET_V = config.model.vocab_size
+    
     while len(unique_tokens) < TARGET_V:
         reserved = f"<RESERVED_{len(unique_tokens)}>"
         unique_tokens.append(reserved)
 
-    # Якщо більше — обрізаємо (зберігаємо перші TARGET_V)
+    # If more — trim (keep first TARGET_V)
     if len(unique_tokens) > TARGET_V:
         unique_tokens = unique_tokens[:TARGET_V]
 
