@@ -77,3 +77,31 @@ class CaseGenerator(BaseGenerator):
                 "output": f"❌ Incorrect.\n✅ Correct: Das ist ein {adj}{ending} {noun}.\n📝 Пояснення: Після неозначеного артикля 'ein' у Nominativ прикметник '{adj}' для {gender}-роду отримує закінчення '-{ending}'."
             })
         return data
+
+    def generate_possessive_pronouns(self, count=1000):
+        """A2: Possessive pronouns (mein, dein, sein, ihr) - correct agreement."""
+        # Focus on "This is my/your/his X" (Nominative)
+        nouns = [("Bruder", "m"), ("Kind", "n"), ("Schwester", "f")]
+        data = []
+        for _ in range(count):
+            sub_key = random.choice(list(self.subjects.keys()))
+            pos_base = self.possessives.get(sub_key, "mein")
+            noun, gender = random.choice(nouns)
+            
+            c_pos = pos_base if gender in ["m", "n"] else pos_base + "e"
+            
+            # Error: forgetting the 'e' for feminine nouns
+            if gender == "f":
+                wrong = f"Das ist {pos_base} {noun}."
+                data.append({
+                    "input": wrong,
+                    "output": f"❌ Incorrect.\n✅ Correct: Das ist {c_pos} {noun}.\n📝 Пояснення: Присвійний займенник '{pos_base}' для жіночого роду '{noun}' повинен мати закінчення '-e'."
+                })
+            else:
+                # Error: adding an unnecessary 'e' for masculine/neuter
+                wrong = f"Das ist {pos_base}e {noun}."
+                data.append({
+                    "input": wrong,
+                    "output": f"❌ Incorrect.\n✅ Correct: Das ist {c_pos} {noun}.\n📝 Пояснення: Для {gender}-роду ('{noun}') присвійний займенник '{pos_base}' не повинен мати закінчення '-e' у початковій формі (Nominativ)."
+                })
+        return data

@@ -125,3 +125,49 @@ class VerbGenerator(BaseGenerator):
                 "output": f"❌ Incorrect.\n✅ Correct: {correct}\n📝 Пояснення: Дієслово '{inf}' є відокремлюваним. У теперішньому часі приставка '{prefix}' має стояти в самому кінці речення."
             })
         return data
+
+    def generate_reflexive_verbs(self, count=1000):
+        """A2: Reflexive verbs (freuen sich, waschen sich)."""
+        verbs = [
+            ("freuen", "freue", "на відпустку", "freuen sich"),
+            ("waschen", "wasche", "обличчя", "waschen sich"),
+            ("ausruhen", "ruhe", "після роботи", "ausruhen sich")
+        ]
+        data = []
+        for _ in range(count):
+            sub_key = random.choice(list(self.subjects.keys()))
+            inf, stem, extra, full_inf = random.choice(verbs)
+            v_form = self.get_verb_form(inf[:-2] if inf.endswith("en") else inf, sub_key)
+            c_refl = self.reflexive_pronouns[sub_key]
+            
+            # Error: wrong reflexive pronoun
+            wrong_sub = random.choice([k for k in self.subjects.keys() if k != sub_key])
+            w_refl = self.reflexive_pronouns[wrong_sub]
+            
+            data.append({
+                "input": f"{sub_key.capitalize()} {v_form} {w_refl} {extra}.",
+                "output": f"❌ Incorrect.\n✅ Correct: {sub_key.capitalize()} {v_form} {c_refl} {extra}.\n📝 Пояснення: Дієслово '{full_inf}' вимагає зворотного займенника '{c_refl}' для підмета '{sub_key}'."
+            })
+        return data
+
+    def generate_praeteritum_essentials(self, count=1000):
+        """A2: Präteritum of sein (war) and haben (hatte)."""
+        scenarios = [
+            ("war", "sein", "вчора вдома"),
+            ("hatte", "haben", "багато роботи")
+        ]
+        data = []
+        for _ in range(count):
+            sub_key = random.choice(list(self.subjects.keys()))
+            aux_type, inf, extra = random.choice(scenarios)
+            c_form = self.subjects[sub_key][aux_type]
+            
+            # Error: wrong conjugation or confusing with Perfekt
+            wrong_sub = random.choice([k for k in self.subjects.keys() if k != sub_key])
+            w_form = self.subjects[wrong_sub][aux_type]
+            
+            data.append({
+                "input": f"{sub_key.capitalize()} {w_form} {extra}.",
+                "output": f"❌ Incorrect.\n✅ Correct: {sub_key.capitalize()} {c_form} {extra}.\n📝 Пояснення: У минулому часі (Präteritum) дієслово '{inf}' для '{sub_key}' має форму '{c_form}'."
+            })
+        return data

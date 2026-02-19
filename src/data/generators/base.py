@@ -15,6 +15,27 @@ class BaseGenerator:
             "ihr": {"bin": "seid", "habe": "habt", "war": "wart", "hatte": "hattet", "ending": "t"},
         }
 
+        # Reflexive pronouns mapping
+        self.reflexive_pronouns = {
+            "ich": "mich",
+            "du": "dich",
+            "er": "sich",
+            "sie": "sich",
+            "es": "sich",
+            "wir": "uns",
+            "ihr": "euch"
+        }
+
+        # Possessive pronouns (Nominative forms)
+        self.possessives = {
+            "ich": "mein",
+            "du": "dein",
+            "er": "sein",
+            "sie": "ihr",
+            "wir": "unser",
+            "ihr": "euer"
+        }
+
         # Nouns by category and gender (for future cases)
         self.nouns = {
             "food": [

@@ -25,20 +25,23 @@ class MasterGenerator:
         # Verb topics
         dataset.extend(self.v_gen.generate_praesens(1500))
         dataset.extend(self.v_gen.generate_perfekt_aux(1500))
-        dataset.extend(self.v_gen.generate_partizip_forms(1500))
-        dataset.extend(self.v_gen.generate_modal_verbs(1500))
-        dataset.extend(self.v_gen.generate_separable_verbs(1500))
+        dataset.extend(self.v_gen.generate_partizip_forms(1000))
+        dataset.extend(self.v_gen.generate_modal_verbs(1000))
+        dataset.extend(self.v_gen.generate_separable_verbs(1000))
+        dataset.extend(self.v_gen.generate_reflexive_verbs(1000))
+        dataset.extend(self.v_gen.generate_praeteritum_essentials(1000))
         
         # Syntax topics
-        dataset.extend(self.s_gen.generate_inversion(1500))
-        dataset.extend(self.s_gen.generate_nebensatz_weil(1500))
-        dataset.extend(self.s_gen.generate_questions(1500))
+        dataset.extend(self.s_gen.generate_inversion(1000))
+        dataset.extend(self.s_gen.generate_nebensatz_weil(1000))
+        dataset.extend(self.s_gen.generate_questions(1000))
         
         # Case topics
-        dataset.extend(self.c_gen.generate_akkusativ_masculine(1500))
-        dataset.extend(self.c_gen.generate_dativ(1500))
-        dataset.extend(self.c_gen.generate_prepositions_akk_dat(1500))
-        dataset.extend(self.c_gen.generate_adjective_endings(1500))
+        dataset.extend(self.c_gen.generate_akkusativ_masculine(1000))
+        dataset.extend(self.c_gen.generate_dativ(1000))
+        dataset.extend(self.c_gen.generate_prepositions_akk_dat(1000))
+        dataset.extend(self.c_gen.generate_adjective_endings(1000))
+        dataset.extend(self.c_gen.generate_possessive_pronouns(1000))
         
         random.shuffle(dataset)
         return dataset
