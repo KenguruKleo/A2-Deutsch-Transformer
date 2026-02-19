@@ -1,0 +1,14 @@
+{
+  "architectures": [
+    "TransformerModel"
+  ],
+  "vocab_size": 4000,
+  "max_position_embeddings": 64,
+  "hidden_size": 128,
+  "num_hidden_layers": 4,
+  "num_attention_heads": 4,
+  "intermediate_size": 512,
+  "model_type": "custom_a2_transformer",
+  "torch_dtype": "float32",
+  "weight_tying": true
+}

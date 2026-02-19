@@ -137,7 +137,27 @@ python src/train.py
 
 # 4. Test the model
 python src/generate.py --text "Ich habe nach Berlin gefahren."
+
+# 5. Export to Hugging Face format
+python src/export_hf.py
 ```
+
+## Hugging Face Integration
+
+To make this model compatible with modern standards and ready for the **Hugging Face Hub**, we provide an export script that converts the native PyTorch checkpoint into the **Safetensors** format.
+
+### Exporting
+Run the following command:
+```bash
+python src/export_hf.py
+```
+This will create a `hf_export/` directory containing:
+- `model.safetensors`: Model weights in a secure, fast format.
+- `config.json`: Model architecture metadata.
+- `vocab.json`: Tokenizer vocabulary.
+
+### Sharing
+You can create a new model repository on [Hugging Face](https://huggingface.co/new) and upload the contents of the `hf_export/` folder. This ensures your model is "Safe-by-default" and easy to share.
 
 ## Data Format (JSONL)
 
