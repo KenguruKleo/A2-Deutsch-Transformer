@@ -38,3 +38,26 @@ class SyntaxGenerator(BaseGenerator):
                 "output": f"❌ Incorrect.\n✅ Correct: Ich esse, weil {sub_key} {obj} {aux}.\n📝 Пояснення: У підрядному реченні зі сполучником 'weil' дієслово '{aux}' має стояти в самому кінці."
             })
         return data
+
+    def generate_questions(self, count=1000):
+        """A1: W-Questions word order."""
+        questions = [
+            ("Wo", "wohn", "du", ""), 
+            ("Was", "mach", "er", "heute"), 
+            ("Wann", "komm", "wir", "")
+        ]
+        data = []
+        for _ in range(count):
+            w_word, stem, sub_key, extra = random.choice(questions)
+            v_form = self.get_verb_form(stem, sub_key)
+            
+            # Correct: Wo wohnst du?
+            # Wrong: Wo du wohnst?
+            correct = f"{w_word} {v_form} {sub_key}{' ' + extra if extra else ''}?"
+            wrong = f"{w_word} {sub_key} {v_form}{' ' + extra if extra else ''}?"
+            
+            data.append({
+                "input": wrong,
+                "output": f"❌ Incorrect.\n✅ Correct: {correct}\n📝 Пояснення: У запитаннях після питального слова '{w_word}' дієслово '{v_form}' має стояти на другому місці, перед підметом '{sub_key}'."
+            })
+        return data

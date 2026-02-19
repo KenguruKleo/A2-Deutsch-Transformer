@@ -65,3 +65,39 @@ class VerbGenerator(BaseGenerator):
                 "output": f"❌ Incorrect.\n✅ Correct: {sub_key.capitalize()} {aux} {obj} {p2}.\n📝 Пояснення: У минулому часі (Perfekt) основне дієслово має бути у формі Partizip II ('{p2}'), а не в інфінітиві ('{inf}')."
             })
         return data
+
+    def generate_modal_verbs(self, count=1000):
+        """A1/A2: Modal verbs (können, müssen, wollen) conjugation and position."""
+        modals = {
+            "können": {"ich": "kann", "du": "kannst", "er": "kann", "sie": "kann", "wir": "können", "ihr": "könnt"},
+            "müssen": {"ich": "muss", "du": "musst", "er": "muss", "sie": "muss", "wir": "müssen", "ihr": "müsst"},
+            "wollen": {"ich": "will", "du": "willst", "er": "will", "sie": "will", "wir": "wollen", "ihr": "wollt"}
+        }
+        main_verbs = [("Deutsch sprechen", "sprechen"), ("nach Hause gehen", "gehen"), ("Suppe kochen", "kochen")]
+        
+        data = []
+        for _ in range(count):
+            sub_key = random.choice(list(self.subjects.keys()))
+            m_inf = random.choice(list(modals.keys()))
+            m_form = modals[m_inf][sub_key]
+            phrase, v_inf = random.choice(main_verbs)
+            
+            # Error type 1: Wrong conjugation of modal
+            wrong_sub = random.choice([k for k in self.subjects.keys() if k != sub_key])
+            wrong_m = modals[m_inf][wrong_sub]
+            
+            data.append({
+                "input": f"{sub_key.capitalize()} {wrong_m} {phrase}.",
+                "output": f"❌ Incorrect.\n✅ Correct: {sub_key.capitalize()} {m_form} {phrase}.\n📝 Пояснення: Модальне дієслово '{m_inf}' для підмета '{sub_key}' має форму '{m_form}'."
+            })
+            
+            # Error type 2: Main verb not at the end
+            # "Ich kann sprechen Deutsch" instead of "Ich kann Deutsch sprechen"
+            if " " in phrase:
+                parts = phrase.split()
+                wrong_phrase = f"{parts[1]} {parts[0]}" # "sprechen Deutsch"
+                data.append({
+                    "input": f"{sub_key.capitalize()} {m_form} {wrong_phrase}.",
+                    "output": f"❌ Incorrect.\n✅ Correct: {sub_key.capitalize()} {m_form} {phrase}.\n📝 Пояснення: У реченнях з модальним дієсловом ('{m_form}') основне дієслово ('{v_inf}') має стояти в самому кінці речення в інфінітиві."
+                })
+        return data

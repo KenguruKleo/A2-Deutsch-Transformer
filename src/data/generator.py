@@ -23,16 +23,19 @@ class MasterGenerator:
         dataset = []
         
         # Verb topics
-        dataset.extend(self.v_gen.generate_praesens(2000))
-        dataset.extend(self.v_gen.generate_perfekt_aux(2000))
-        dataset.extend(self.v_gen.generate_partizip_forms(2000))
+        dataset.extend(self.v_gen.generate_praesens(1500))
+        dataset.extend(self.v_gen.generate_perfekt_aux(1500))
+        dataset.extend(self.v_gen.generate_partizip_forms(1500))
+        dataset.extend(self.v_gen.generate_modal_verbs(1500))
         
         # Syntax topics
-        dataset.extend(self.s_gen.generate_inversion(2000))
-        dataset.extend(self.s_gen.generate_nebensatz_weil(2000))
+        dataset.extend(self.s_gen.generate_inversion(1500))
+        dataset.extend(self.s_gen.generate_nebensatz_weil(1500))
+        dataset.extend(self.s_gen.generate_questions(1500))
         
         # Case topics
-        dataset.extend(self.c_gen.generate_akkusativ_masculine(2000))
+        dataset.extend(self.c_gen.generate_akkusativ_masculine(1500))
+        dataset.extend(self.c_gen.generate_dativ(1500))
         
         random.shuffle(dataset)
         return dataset
