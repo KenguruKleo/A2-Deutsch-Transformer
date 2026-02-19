@@ -29,6 +29,7 @@ from pathlib import Path
 # Add project root to sys.path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 from src.config import load_config
+from src.tokenizer.tokenizer import Tokenizer
 
 def build_vocab() -> dict[str, int]:
     """Збирає все в один великий словник: token → id."""
@@ -1102,6 +1103,12 @@ def build_vocab() -> dict[str, int]:
     pdf_words = _extract_pdf_words()
     tokens.extend(pdf_words)
 
+    # ─── 28. Екстракція слів із згенерованих даних ────────
+    # АВТОМАТИЗАЦІЯ: Читаємо файли навчання/валідації і додаємо всі слова, що там є.
+    # Це гарантує, що жодне слово з генератора не потрапить у <UNK>.
+    data_words = _extract_tokens_from_data()
+    tokens.extend(data_words)
+
     # ─── Дедуплікація та побудова словника ────────────────
     seen: set[str] = set()
     unique_tokens: list[str] = []
@@ -1124,6 +1131,47 @@ def build_vocab() -> dict[str, int]:
 
     vocab = {token: idx for idx, token in enumerate(unique_tokens)}
     return vocab
+
+
+def _extract_tokens_from_data() -> list[str]:
+    """Витягує всі унікальні токени з файлів згенерованих даних."""
+    config = load_config()
+    data_paths = [config.data.train_path, config.data.val_path]
+    
+    unique_tokens = set()
+    # Тимчасовий токенізатор (без завантаження vobab.json, нам потрібен лише метод _tokenize)
+    # Ми не можемо створити екземпляр Tokenizer, бо він потребує vocab.json
+    # Використовуємо логіку прямо з Tokenizer
+    import re
+    pattern = (
+        r"Correct:|Incorrect\.|Explanation:|Пояснення:"
+        r"|\.\.\."
+        r"|[✅❌📝]"
+        r"|\n"
+        r"|[A-Za-zÄäÖöÜüß\u0400-\u04FF]+"
+        r"|[.,!?;:\"'\-()]"
+    )
+
+    for path_str in data_paths:
+        p = Path(path_str)
+        if not p.exists():
+            continue
+        
+        print(f"  🔍 Extracting tokens from {p.name}...")
+        with open(p, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    entry = json.loads(line)
+                    # Токенізуємо input та output
+                    for text in [entry.get("input", ""), entry.get("output", "")]:
+                        tokens = re.findall(pattern, text)
+                        for t in tokens:
+                            if t:
+                                unique_tokens.add(t)
+                except:
+                    continue
+    
+    return list(unique_tokens)
 
 
 def _extract_pdf_words() -> list[str]:
