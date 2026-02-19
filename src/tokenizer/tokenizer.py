@@ -1,40 +1,40 @@
 """
-tokenizer.py — Word-level токенізатор для A2 German Grammar Tutor.
+tokenizer.py — Word-level tokenizer for A2 German Grammar Tutor.
 
 ═══════════════════════════════════════════════════════════
-ЩО ТАКЕ ТОКЕНІЗАТОР?
+WHAT IS A TOKENIZER?
 ═══════════════════════════════════════════════════════════
 
-Модель працює лише з числами. Токенізатор — це «перекладач»
-між людським текстом і числами (ID):
+The model works only with numbers. A tokenizer is a "translator"
+between human text and numbers (IDs):
 
-    encode("Ich bin müde.") → [4, 60, 469, 4]      текст → числа
-    decode([4, 60, 469, 4]) → "Ich bin müde."       числа → текст
+    encode("Ich bin müde.") → [4, 60, 469, 4]      text → numbers
+    decode([4, 60, 469, 4]) → "Ich bin müde."       numbers → text
 
-Як це працює:
-    1. Текст розбивається на слова (токени)
-    2. Кожне слово шукається у словнику (vocab.json)
-    3. Якщо слово знайдене → повертаємо його ID
-    4. Якщо не знайдене → повертаємо ID <UNK> (unknown)
+How it works:
+    1. Text is split into words (tokens)
+    2. Each word is looked up in the dictionary (vocab.json)
+    3. If word is found → return its ID
+    4. If not found → return ID <UNK> (unknown)
 
-Спеціальні токени:
-    <PAD> (id=0) — заповнення коротких послідовностей до однієї довжини
-    <BOS> (id=1) — "beginning of sequence" — маркер початку тексту
-    <EOS> (id=2) — "end of sequence" — маркер кінця тексту
-    <UNK> (id=3) — "unknown" — замінює будь-яке невідоме слово
+Special tokens:
+    <PAD> (id=0) — padding shorter sequences to equal length
+    <BOS> (id=1) — "beginning of sequence" — start of text marker
+    <EOS> (id=2) — "end of sequence" — end of text marker
+    <UNK> (id=3) — "unknown" — replaces any unknown word
 
 ═══════════════════════════════════════════════════════════
-ЧОМУ WORD-LEVEL, А НЕ BPE/SENTENCEPIECE?
+WHY WORD-LEVEL INSTEAD OF BPE/SENTENCEPIECE?
 ═══════════════════════════════════════════════════════════
 
-Для великих моделей (GPT, LLaMA) використовують sub-word токенізатори
-(BPE), які розбивають слова на частини: "gegangen" → "ge" + "gang" + "en".
+Large models (GPT, LLaMA) use sub-word tokenizers (BPE), 
+which split words into parts: "gegangen" → "ge" + "gang" + "en".
 
-Ми обрали word-level, тому що:
-    ✅ Простіше для навчання та розуміння
-    ✅ V=2000 достатньо для A2 (обмежена лексика)
-    ✅ Кожен токен = ціле слово → легше інтерпретувати
-    ❌ Мінус: невідомі слова → <UNK> (не може «вгадати» за частинами)
+We chose word-level because:
+    ✅ Simpler for training and understanding
+    ✅ V=4000 is enough for A2 (limited vocabulary)
+    ✅ Each token = a whole word → easier to interpret
+    ❌ Drawback: unknown words → <UNK> (cannot "guess" by parts)
 
 ═══════════════════════════════════════════════════════════
 """
@@ -44,7 +44,7 @@ import re
 from pathlib import Path
 
 
-# Тензорні форми (tensor shapes) для цього етапу:
+# Tensor shapes for this stage:
 #
 #   Input text:     "Ich bin müde."
 #   After encode:   [1, 60, 155, 469, 4, 2]          shape: [seq_len]
@@ -58,26 +58,26 @@ from pathlib import Path
 
 
 class Tokenizer:
-    """Word-level токенізатор з фіксованим словником.
+    """Word-level tokenizer with fixed vocabulary.
 
-    Матричне представлення:
-        vocab — це відображення (mapping): str → int
-        Embedding-шар потім перетворить int → vector [d_model]
+    Matrix representation:
+        vocab — mapping: str → int
+        Embedding layer will then convert int → vector [d_model]
 
-        Ланцюг:  текст → Tokenizer → [id₁, id₂, …] → Embedding → [[v₁], [v₂], …]
+        Chain:  text → Tokenizer → [id₁, id₂, …] → Embedding → [[v₁], [v₂], …]
                   str       ↓          list[int]          ↓         [seq_len, d_model]
     """
 
-    # Спеціальні токени — константи
+    # Special tokens constants
     PAD_TOKEN = "<PAD>"
     BOS_TOKEN = "<BOS>"
     EOS_TOKEN = "<EOS>"
     UNK_TOKEN = "<UNK>"
 
     def __init__(self, vocab_path: str | Path | None = None):
-        """Завантажує словник з JSON-файлу."""
+        """Loads vocabulary from a JSON file."""
         if vocab_path is None:
-            # Шукаємо у тій же директорії, де лежить цей скрипт
+            # Look in the same directory as this script
             vocab_path = Path(__file__).parent / "vocab.json"
         
         vocab_path = Path(vocab_path)
@@ -90,12 +90,12 @@ class Tokenizer:
         with open(vocab_path, "r", encoding="utf-8") as f:
             self.token_to_id: dict[str, int] = json.load(f)
 
-        # Зворотній маппінг: id → token (для decode)
+        # Reverse mapping: id → token (for decoding)
         self.id_to_token: dict[int, str] = {
             idx: token for token, idx in self.token_to_id.items()
         }
 
-        # Зберігаємо ID спеціальних токенів для швидкого доступу
+        # Store special token IDs for fast access
         self.pad_id = self.token_to_id[self.PAD_TOKEN]   # 0
         self.bos_id = self.token_to_id[self.BOS_TOKEN]   # 1
         self.eos_id = self.token_to_id[self.EOS_TOKEN]   # 2
@@ -103,35 +103,35 @@ class Tokenizer:
 
     @property
     def vocab_size(self) -> int:
-        """Розмір словника — кількість унікальних токенів.
+        """Vocabulary size — number of unique tokens.
 
-        Це число визначає розмір embedding-матриці:
-            Embedding matrix shape = [vocab_size, d_model] = [~2000, 128]
+        This number determines the size of the embedding matrix:
+            Embedding matrix shape = [vocab_size, d_model] = [4000, 128]
         """
         return len(self.token_to_id)
 
     def _tokenize(self, text: str) -> list[str]:
-        """Розбиває текст на список токенів (слів + пунктуація).
+        """Splits text into a list of tokens (words + punctuation).
 
-        Використовує regex для розділення:
-        - Слова (з умлаутами: ä, ö, ü, ß)
-        - Пунктуація окремо (. , ! ? : ;)
-        - Emoji-маркери (✅, ❌, 📝)
-        - Спеціальні слова з двокрапкою (Correct:, Explanation:)
-        - Символ нового рядка \\n
+        Uses regex for separation:
+        - Words (with umlauts: ä, ö, ü, ß)
+        - Punctuation separately (. , ! ? : ;)
+        - Emoji markers (✅, ❌, 📝)
+        - Special keywords (Correct:, Explanation:, Пояснення:)
+        - Newline symbol \n
 
-        Приклад:
+        Example:
             "Ich bin müde." → ["Ich", "bin", "müde", "."]
             "❌ Incorrect." → ["❌", "Incorrect", "."]
         """
-        # Порядок альтернатив важливий: спершу довші патерни!
+        # Alternative order is important: longer patterns first!
         pattern = (
             r"Correct:|Incorrect\.|Explanation:|Пояснення:"  # multi-char specials
-            r"|\.\.\."                                        # три крапки (...)
-            r"|[✅❌📝]"                                      # emoji-маркери
-            r"|\n"                                            # новий рядок
-            r"|[A-Za-zÄäÖöÜüß\u0400-\u04FF]+"               # слова
-            r"|[.,!?;:\"'\-()]"                               # пунктуація
+            r"|\.\.\."                                        # triple dots (...)
+            r"|[✅❌📝]"                                      # emoji markers
+            r"|\n"                                            # new line
+            r"|[A-Za-zÄäÖöÜüß\u0400-\u04FF]+"               # words (German + Slavic characters)
+            r"|[.,!?;:\"'\-()]"                               # punctuation
         )
         tokens = re.findall(pattern, text)
         return [t for t in tokens if t]  # filter empty strings just in case
@@ -143,20 +143,20 @@ class Tokenizer:
         add_eos: bool = True,
         max_len: int | None = None,
     ) -> list[int]:
-        """Перетворює текст у послідовність ID.
+        """Converts text into a sequence of IDs.
 
-        Tensor shape: [seq_len]  — одновимірний вектор
+        Tensor shape: [seq_len] — 1D vector
 
         Args:
-            text: вхідний текст
-            add_bos: чи додавати <BOS> на початок (зазвичай True)
-            add_eos: чи додавати <EOS> в кінець (зазвичай True)
-            max_len: максимальна довжина (обрізає, якщо довше)
+            text: input text
+            add_bos: whether to add <BOS> at the beginning (usually True)
+            add_eos: whether to add <EOS> at the end (usually True)
+            max_len: maximum length (trims if longer)
 
         Returns:
-            list[int] — послідовність token ID
+            list[int] — sequence of token IDs
 
-        Приклад:
+        Example:
             encode("Ich bin müde.")
             → tokenize: ["Ich", "bin", "müde", "."]
             → lookup:   [60, 155, 469, 4]
@@ -169,41 +169,41 @@ class Tokenizer:
             ids.append(self.bos_id)
 
         for token in raw_tokens:
-            # Шукаємо токен у словнику
+            # Look up token in dictionary
             token_id = self.token_to_id.get(token)
             if token_id is not None:
                 ids.append(token_id)
             else:
-                # Спробуємо lowercase (якщо «Heute» не знайдено, шукаємо «heute»)
+                # Try lowercase (if "Heute" is not found, look for "heute")
                 token_id = self.token_to_id.get(token.lower())
                 if token_id is not None:
                     ids.append(token_id)
                 else:
-                    ids.append(self.unk_id)  # невідоме слово → <UNK>
+                    ids.append(self.unk_id)  # unknown word → <UNK>
 
         if add_eos:
             ids.append(self.eos_id)
 
-        # Обрізаємо до max_len (включно з BOS/EOS)
+        # Trim to max_len (including BOS/EOS)
         if max_len is not None and len(ids) > max_len:
             ids = ids[:max_len]
-            # Переконуємось що останній токен — EOS
+            # Ensure last token is EOS if requested
             if add_eos:
                 ids[-1] = self.eos_id
 
         return ids
 
     def decode(self, ids: list[int], skip_special: bool = True) -> str:
-        """Перетворює послідовність ID назад у текст.
+        """Converts a sequence of IDs back to text.
 
         Args:
-            ids: список token ID
-            skip_special: якщо True, пропускає <PAD>, <BOS>, <EOS>, <UNK>
+            ids: list of token IDs
+            skip_special: if True, skips <PAD>, <BOS>, <EOS>, <UNK>
 
         Returns:
-            str — відновлений текст
+            str — reconstructed text
 
-        Приклад:
+        Example:
             decode([1, 60, 155, 469, 4, 2]) → "Ich bin müde."
         """
         special_ids = {self.pad_id, self.bos_id, self.eos_id}
@@ -215,8 +215,8 @@ class Tokenizer:
             token = self.id_to_token.get(token_id, self.UNK_TOKEN)
             tokens.append(token)
 
-        # Зʼєднуємо токени назад у текст
-        # Пунктуація приєднується без пробілу перед нею
+        # Join tokens back into text
+        # Punctuation attaches without a space before it
         if not tokens:
             return ""
 
@@ -236,19 +236,19 @@ class Tokenizer:
     def pad_sequence(
         self, ids: list[int], max_len: int, pad_id: int | None = None
     ) -> list[int]:
-        """Доповнює послідовність PAD-токенами до потрібної довжини.
+        """Pads sequence with PAD tokens to the required length.
 
-        Навіщо padding?
-        Нейромережа обробляє дані батчами (пачками).
-        Всі послідовності в батчі мають бути однієї довжини:
+        Why padding?
+        The neural network processes data in batches.
+        All sequences in a batch must have the same length:
 
-            Batch (до padding):
-                [1, 60, 155, 469, 4, 2]        ← 6 токенів
-                [1, 22, 88,  4,   2]            ← 5 токенів  ← РІЗНА ДОВЖИНА!
+            Batch (before padding):
+                [1, 60, 155, 469, 4, 2]        ← 6 tokens
+                [1, 22, 88,  4,   2]            ← 5 tokens  ← DIFFERENT LENGTHS!
 
-            Batch (після padding до max_len=6):
-                [1, 60, 155, 469, 4, 2]         ← 6 токенів
-                [1, 22, 88,  4,   2, 0]         ← 6 токенів  ← 0 = PAD
+            Batch (after padding to max_len=6):
+                [1, 60, 155, 469, 4, 2]         ← 6 tokens
+                [1, 22, 88,  4,   2, 0]         ← 6 tokens  ← 0 = PAD
 
             Tensor shape: [batch_size=2, max_seq_len=6]
         """
@@ -264,7 +264,7 @@ class Tokenizer:
 
 
 # ═══════════════════════════════════════════════════════════
-# SELF-TEST: запусти python tokenizer.py для перевірки
+# SELF-TEST: run 'python tokenizer.py' to verify
 # ═══════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
@@ -298,7 +298,7 @@ if __name__ == "__main__":
 
     # ─── Test 3: Tutor response format ────────────────────
     print("\n─── Test 3: Tutor Response ───")
-    tutor_output = "❌ Incorrect.\n✅ Correct: Ich bin nach Hause gegangen.\n📝 Explanation: gehen вживається з sein."
+    tutor_output = "❌ Incorrect.\n✅ Correct: Ich bin nach Hause gegangen.\n📝 Explanation: gehen is used with sein."
     encoded_tutor = tok.encode(tutor_output)
     decoded_tutor = tok.decode(encoded_tutor)
     print(f"  Input:   '{tutor_output}'")

@@ -1,99 +1,135 @@
 # 🇩🇪 A2 Deutsch Grammar Tutor
 
-Компактна Transformer-модель для перевірки та пояснення помилок у німецьких реченнях рівня A2. 
-Навчена виправляти граматику та пояснювати правила українською мовою.
+A compact Transformer model for checking and explaining errors in German sentences at the A2 level. 
+Trained to correct grammar and provide simple explanations.
 
-## Що вміє модель
+## Features
 
-| Функція | Приклад |
+| Function | Example |
 |---|---|
-| ✅ Визначає правильність | `Ich bin nach Hause gegangen.` → ✅ |
-| ❌ Виправляє помилки | `Dann я gehe...` → `Dann gehe ich...` |
-| 📝 Пояснює | Прислівник на початку вимагає інверсії підмета |
+| ✅ Validity Check | `Ich bin nach Hause gegangen.` → ✅ |
+| ❌ Error Correction | `Dann ich gehe...` → `Dann gehe ich...` |
+| 📝 Explanations | An adverb at the start requires subject-verb inversion. |
 
-### Покриті теми A2
+### Covered A2 Topics
 
 - **Perfekt** — haben/sein + Partizip II
-- **Word Order** — інверсія, дієслово на 2-му місці
-- **Dativ / Akkusativ** — керування дієслів та прийменників
-- **Модальні дієслова** — відмінювання та позиція в реченні
-- **Заперечення** — kein vs. nicht
+- **Word Order** — inversion, verb in 2nd position
+- **Dativ / Akkusativ** — verb and preposition government
+- **Modal Verbs** — conjugation and position in the sentence
+- **Negation** — kein vs. nicht
 
-## Архітектура
+## Architecture
 
 ```
 Transformer Decoder Only
-├── V = 4 000 токенів (слова + форми + укр. пояснення)
-├── T = 64  (макс. довжина речення)
+├── V = 4,000 tokens (words + forms + explanations)
+├── T = 64  (max sequence length)
 ├── d_model = 128
-├── L = 4 блоки (Layers)
-├── H = 4 голови (Attention Heads)
-├── Weight tying = ON (спільні ваги Embeddings та LM Head)
-└── Precision = FP16 → розмір моделі ≈ 2.5 MB
+├── L = 4 Layers
+├── H = 4 Attention Heads
+├── Weight tying = ON (shared weights between Embeddings and LM Head)
+└── Precision = FP16 → Model size ≈ 2.5 MB
 
-Детальний математичний опис усіх матричних перетворень дивись у [docs/architecture.md](docs/architecture.md).
+Detailed mathematical description of all matrix transformations can be found in [docs/architecture.md](docs/architecture.md).
 ```
 
-## Структура проєкту
+## Project Structure
 
 ```text
 A2-Deutsch-Transformer/
 ├── src/
 │   ├── tokenizer/
-│   │   ├── build_vocab.py   # Скрипт аналізу PDF та створення словника
-│   │   ├── tokenizer.py     # Word-level токенізатор
-│   │   └── vocab.json       # Готовий словник (4000 слів)
+│   │   ├── build_vocab.py   # Script for PDF analysis and vocab creation
+│   │   ├── tokenizer.py     # Word-level tokenizer
+│   │   └── vocab.json       # Generated vocabulary (4000 tokens)
 │   ├── model/
-│   │   └── model.py         # Архітектура нейромережі (PyTorch)
+│   │   └── model.py         # Transformer architecture (PyTorch)
 │   ├── data/
-│   │   └── generator.py     # Розумний генератор синтетичних помилок
-│   ├── train.py             # Скрипт навчання (оптимізовано для MPS/M1)
-│   └── generate.py          # Скрипт для тестування моделі
-├── data/                    # Згенеровані датасети (JSONL)
-├── data_raw/                # Сирі дані (PDF підручники)
-├── config.yaml              # Глобальні налаштування
-└── requirements.txt
+│   │   └── generator.py     # Synthetic error generator
+│   ├── train.py             # Training script (optimized for MPS/M1)
+│   └── generate.py          # Generation/Inference script
+├── tests/
+│   └── test_model.py        # Model architecture and device tests
+├── data/                    # Generated datasets (JSONL)
+├── data_raw/                # Raw data (PDF textbooks)
+├── docs/                    # Technical documentation
+├── requirements.txt
+└── README.md
 ```
 
-## Як це працює
+## How It Works
 
 ### 1. `build_vocab.py`
-Створює "мозок" токенізатора. Він аналізує підручник `Begegnungen_A2.pdf`, витягує найчастіші німецькі слова, додає до них таблиці відмінювання дієслів та українські слова для пояснень. Результат — файл `vocab.json` на 4000 унікальних токенів.
+Creates the "brain" of the tokenizer. It analyzes the `Begegnungen_A2.pdf` textbook, extracts the most frequent German words, adds conjugation tables, and includes words for explanations. The result is a `vocab.json` file with 4000 unique tokens.
 
 ### 2. `generator.py`
-Створює тисячі прикладів для навчання. Він знає правила граматики, бере правильне речення і навмисно "ламає" його (наприклад, міняє порядок слів або допоміжне дієслово), додаючи пояснення, чому це помилка.
+Generates thousands of training examples. It knows grammar rules, takes a correct sentence and intentionally "breaks" it (e.g., changes word order or auxiliary verb), adding an explanation of why it is an error.
 
-### 3. Навчання
-Модель тренується локально на **Apple Silicon (M1/M2/M3)** за допомогою `torch.device("mps")`. Завдяки маленькому розміру (2.5 МБ), навчання займає лічені хвилини.
+### 3. Training
+The model is trained locally on **Apple Silicon (M1/M2/M3)** using `torch.device("mps")`. Due to its small size (2.5 MB), training takes only a few minutes.
 
-## Швидкий старт
+## Installation & Setup
+
+Follow these steps to initialize the project and set up the environment:
 
 ```bash
-# 1. Встановити залежності
-pip install -r requirements.txt
+# 1. Clone the repository (if not already done)
+git clone https://github.com/KenguruKleo/A2-Deutsch-Transformer.git
+cd A2-Deutsch-Transformer
 
-# 2. Створити словник (якщо змінили списки слів)
+# 2. Create a virtual environment
+python3 -m venv .venv
+
+# 3. Activate the virtual environment
+source .venv/bin/activate  # On macOS/Linux
+# .venv\Scripts\activate     # On Windows
+
+# 4. Install dependencies
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+## Testing
+
+To verify the model architecture and device compatibility, run the following command:
+
+```bash
+# Run model unit tests
+python tests/test_model.py
+```
+
+These tests check:
+- Output dimensions (`[batch, seq_len, vocab_size]`).
+- Successful execution on **MPS** (Apple Silicon) or **CPU**.
+
+## Quick Start
+
+Once the environment is set up and activated:
+
+```bash
+# 1. Build vocabulary (if changing word lists)
 python src/tokenizer/build_vocab.py
 
-# 3. Згенерувати дані (5000+ прикладів)
+# 2. Generate training data
 python src/data/generator.py
 
-# 4. Запустити навчання
+# 3. Run training
 python src/train.py
 
-# 5. Перевірити речення
+# 4. Test the model
 python src/generate.py --text "Ich habe nach Berlin gefahren."
 ```
 
-## Формат даних (JSONL)
+## Data Format (JSONL)
 
 ```json
 {
   "input": "Heute ich gehe ins Kino.",
-  "output": "❌ Incorrect.\n✅ Correct: Heute gehe ich ins Kino.\n📝 Пояснення: Дієслово має стояти на другому місці."
+  "output": "❌ Incorrect.\n✅ Correct: Heute gehe ich ins Kino.\n📝 Explanation: The verb must be in the second position."
 }
 ```
 
-## Ліцензія
+## License
 
 MIT
