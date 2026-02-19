@@ -30,6 +30,8 @@ Transformer Decoder Only
 ├── H = 4 голови (Attention Heads)
 ├── Weight tying = ON (спільні ваги Embeddings та LM Head)
 └── Precision = FP16 → розмір моделі ≈ 2.5 MB
+
+Детальний математичний опис усіх матричних перетворень дивись у [docs/architecture.md](docs/architecture.md).
 ```
 
 ## Структура проєкту
