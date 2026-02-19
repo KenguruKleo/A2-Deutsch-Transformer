@@ -171,3 +171,27 @@ class VerbGenerator(BaseGenerator):
                 "output": f"❌ Incorrect.\n✅ Correct: {sub_key.capitalize()} {c_form} {extra}.\n📝 Пояснення: У минулому часі (Präteritum) дієслово '{inf}' для '{sub_key}' має форму '{c_form}'."
             })
         return data
+
+    def generate_imperativ(self, count=1000):
+        """A1/A2: Imperativ (du, ihr, Sie forms)."""
+        verbs = [
+            ("gehen", "Geh", "Geht", "Gehen Sie"),
+            ("machen", "Mach", "Macht", "Machen Sie"),
+            ("kommen", "Komm", "Kommt", "Kommen Sie")
+        ]
+        data = []
+        for _ in range(count):
+            inf, du, ihr, sie = random.choice(verbs)
+            
+            # Error type 1: "Du gehst!" instead of "Geh!"
+            data.append({
+                "input": f"Du {inf[:-2]}st!",
+                "output": f"❌ Incorrect.\n✅ Correct: {du}!\n📝 Пояснення: У наказовому способі (Imperativ) для 'du' закінчення '-st' та займенник 'du' відкидаються."
+            })
+            
+            # Error type 2: "Ihr gehen!" instead of "Geht!"
+            data.append({
+                "input": f"Ihr {inf}!",
+                "output": f"❌ Incorrect.\n✅ Correct: {ihr}!\n📝 Пояснення: У наказовому способі (Imperativ) для 'ihr' дієслово має закінчення '-t' (як у теперішньому часі), але без займенника 'ihr'."
+            })
+        return data

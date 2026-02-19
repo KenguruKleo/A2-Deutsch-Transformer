@@ -102,6 +102,50 @@ class CaseGenerator(BaseGenerator):
                 wrong = f"Das ist {pos_base}e {noun}."
                 data.append({
                     "input": wrong,
-                    "output": f"❌ Incorrect.\n✅ Correct: Das ist {c_pos} {noun}.\n📝 Пояснення: Для {gender}-роду ('{noun}') присвійний займенник '{pos_base}' не повинен мати закінчення '-e' у початковій формі (Nominativ)."
+                    "output": f"❌ Incorrect.\n✅ Correct: {c_pos} {noun}.\n📝 Пояснення: Для {gender}-роду ('{noun}') присвійний займенник '{pos_base}' не повинен мати закінчення '-e' у початковій формі (Nominativ)."
+                })
+        return data
+
+    def generate_komparation(self, count=1000):
+        """A2: Comparison of adjectives (gut-besser, viel-mehr)."""
+        adjectives = [
+            ("gut", "besser", "am besten"),
+            ("viel", "mehr", "am meisten"),
+            ("schnell", "schneller", "am schnellsten")
+        ]
+        data = []
+        for _ in range(count):
+            adj, comp, super_l = random.choice(adjectives)
+            
+            # Error style 1: "mehr gut" instead of "besser"
+            data.append({
+                "input": f"Das ist mehr {adj}.",
+                "output": f"❌ Incorrect.\n✅ Correct: Das ist {comp}.\n📝 Пояснення: У німецькій мові ступені порівняння утворюються за допомогою суфіксів (або зміни кореня), а не словом 'mehr'."
+            })
+        return data
+
+    def generate_fixed_prepositions(self, count=1000):
+        """A1/A2: Prepositions with fixed cases (mit + Dat, für + Akk)."""
+        preps_dat = [("mit", "dem", "den"), ("nach", "dem", "das")]
+        preps_akk = [("für", "den", "dem"), ("ohne", "den", "der")]
+        nouns = [("Freund", "m"), ("Auto", "n")]
+        
+        data = []
+        for _ in range(count):
+            if random.random() > 0.5:
+                # Dativ test
+                prep, c_art, w_art = random.choice(preps_dat)
+                noun = random.choice(nouns)[0]
+                data.append({
+                    "input": f"Ich gehe {prep} {w_art} {noun}.",
+                    "output": f"❌ Incorrect.\n✅ Correct: Ich gehe {prep} {c_art} {noun}.\n📝 Пояснення: Прийменник '{prep}' завжди вимагає Dativ. Тому артикль має бути '{c_art}'."
+                })
+            else:
+                # Akkusativ test
+                prep, c_art, w_art = random.choice(preps_akk)
+                noun = nouns[0][0] # Freund (m)
+                data.append({
+                    "input": f"Das ist {prep} {w_art} {noun}.",
+                    "output": f"❌ Incorrect.\n✅ Correct: Das ist {prep} {c_art} {noun}.\n📝 Пояснення: Прийменник '{prep}' завжди вимагає Akkusativ. Тому артикль має бути '{c_art}'."
                 })
         return data

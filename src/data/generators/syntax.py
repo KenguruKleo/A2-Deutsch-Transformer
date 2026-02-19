@@ -61,3 +61,47 @@ class SyntaxGenerator(BaseGenerator):
                 "output": f"❌ Incorrect.\n✅ Correct: {correct}\n📝 Пояснення: У запитаннях після питального слова '{w_word}' дієслово '{v_form}' має стояти на другому місці, перед підметом '{sub_key}'."
             })
         return data
+
+    def generate_nebensatz_dass_wenn(self, count=1000):
+        """A2: Subordinate clauses mit dass, wenn (Verb at the end)."""
+        conjunctions = ["dass", "wenn"]
+        scenarios = [
+            ("ich", "habe", "Zeit", "Ich komme,"),
+            ("er", "ist", "krank", "Ich glaube,"),
+            ("wir", "lernen", "Deutsch", "Es ist gut,")
+        ]
+        data = []
+        for _ in range(count):
+            sub, verb, obj, main = random.choice(scenarios)
+            conj = random.choice(conjunctions)
+            
+            # Error: Verb not in the end
+            data.append({
+                "input": f"{main} {conj} {sub} {verb} {obj}.",
+                "output": f"❌ Incorrect.\n✅ Correct: {main} {conj} {sub} {obj} {verb}.\n📝 Пояснення: У підрядному реченні зі сполучником '{conj}' дієслово '{verb}' має стояти в самому кінці речення."
+            })
+        return data
+
+    def generate_negation(self, count=1000):
+        """A1: Negation with 'nicht' vs 'kein'."""
+        nouns = [("Hunger", "m"), ("Auto", "n"), ("Zeit", "f")]
+        adjectives = [("gut", "Das ist"), ("kalt", "Es ist")]
+        
+        data = []
+        for _ in range(count):
+            if random.random() > 0.5:
+                # Noun negation (should be kein)
+                noun, gender = random.choice(nouns)
+                c_neg = "kein" if gender != "f" else "keine"
+                data.append({
+                    "input": f"Ich habe nicht {noun}.",
+                    "output": f"❌ Incorrect.\n✅ Correct: Ich habe {c_neg} {noun}.\n📝 Пояснення: Для заперечення іменників (без означеного артикля) використовується 'kein' (або 'keine' для жін. роду), а не 'nicht'."
+                })
+            else:
+                # Adjective negation (should be nicht)
+                adj, prefix = random.choice(adjectives)
+                data.append({
+                    "input": f"{prefix} kein {adj}.",
+                    "output": f"❌ Incorrect.\n✅ Correct: {prefix} nicht {adj}.\n📝 Пояснення: Для заперечення прикметників або обставин використовується 'nicht', а не 'kein'."
+                })
+        return data

@@ -30,11 +30,14 @@ class MasterGenerator:
         dataset.extend(self.v_gen.generate_separable_verbs(1000))
         dataset.extend(self.v_gen.generate_reflexive_verbs(1000))
         dataset.extend(self.v_gen.generate_praeteritum_essentials(1000))
+        dataset.extend(self.v_gen.generate_imperativ(1000))
         
         # Syntax topics
         dataset.extend(self.s_gen.generate_inversion(1000))
         dataset.extend(self.s_gen.generate_nebensatz_weil(1000))
         dataset.extend(self.s_gen.generate_questions(1000))
+        dataset.extend(self.s_gen.generate_nebensatz_dass_wenn(1000))
+        dataset.extend(self.s_gen.generate_negation(1000))
         
         # Case topics
         dataset.extend(self.c_gen.generate_akkusativ_masculine(1000))
@@ -42,6 +45,8 @@ class MasterGenerator:
         dataset.extend(self.c_gen.generate_prepositions_akk_dat(1000))
         dataset.extend(self.c_gen.generate_adjective_endings(1000))
         dataset.extend(self.c_gen.generate_possessive_pronouns(1000))
+        dataset.extend(self.c_gen.generate_komparation(1000))
+        dataset.extend(self.c_gen.generate_fixed_prepositions(1000))
         
         random.shuffle(dataset)
         return dataset

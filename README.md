@@ -11,13 +11,31 @@ Trained to correct grammar and provide simple explanations.
 | ❌ Error Correction | `Dann ich gehe...` → `Dann gehe ich...` |
 | 📝 Explanations | An adverb at the start requires subject-verb inversion. |
 
-### Covered A2 Topics
+### ✅ Covered A1-A2 Topics (100% Complete)
 
-- **Perfekt** — haben/sein + Partizip II
-- **Word Order** — inversion, verb in 2nd position
-- **Dativ / Akkusativ** — verb and preposition government
-- **Modal Verbs** — conjugation and position in the sentence
-- **Negation** — kein vs. nicht
+| Topic | Level | What the model does / Explanation | Status |
+|:---|:---:|:---|:---:|
+| **Präsens** | A1 | Verb conjugation (e.g., *ich esse, du isst*). | ✅ |
+| **W-Fragen** | A1 | Question word order (*Wo wohnst du?*). | ✅ |
+| **Akkusativ** | A1 | Masculine article change (*der -> den*). | ✅ |
+| **Negation** | A1 | Usage of *nicht* vs. *kein* (noun vs. adj/verb). | ✅ |
+| **Modalverben** | A1/A2 | Conjugation and putting the main verb at the end. | ✅ |
+| **Possessivpron.**| A1/A2 | Agreement of *mein, dein, sein...* in Nominativ. | ✅ |
+| **Fixed Prepos.** | A1/A2 | Prepositions with fixed cases (*mit + Dat*, *für + Akk*). | ✅ |
+| **Imperativ** | A1/A2 | Command forms for *du*, *ihr*, and *Sie*. | ✅ |
+| **Perfekt** | A2 | Choosing *haben* vs. *sein* and *Partizip II* forms. | ✅ |
+| **Inversion** | A2 | Verb-second rule after adverbs (*Heute gehe ich...*). | ✅ |
+| **Separable Verbs**| A2 | Prefix position in present tense (*Ich kaufe ein*). | ✅ |
+| **Dativ** | A2 | Articles after Dativ-governing verbs (*helfen, danken*). | ✅ |
+| **Wechselpräp.** | A2 | Two-way prepositions (Wohin? -> Akk / Wo? -> Dat). | ✅ |
+| **Nebensätze** | A2 | Verb-last order in clauses with *weil, dass, wenn*. | ✅ |
+| **Adjektivdekl.** | A2 | Basic endings after *ein* in Nominativ. | ✅ |
+| **Reflexive Verben**| A2 | Correct reflexive pronouns (*mich, dich, sich...*). | ✅ |
+| **Präteritum** | A2 | Past tense forms for *sein* and *haben* (*war, hatte*). | ✅ |
+| **Komparation** | A2 | Adjective comparison (*gut - besser*, not *mehr gut*). | ✅ |
+
+For a complete list of examples and model explanations for each topic, see:  
+👉 **[Grammar Topics & Examples](docs/topics_examples.md)**
 
 ## Architecture
 
