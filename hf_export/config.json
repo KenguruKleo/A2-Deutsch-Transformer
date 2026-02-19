@@ -8,7 +8,7 @@
   "num_hidden_layers": 4,
   "num_attention_heads": 4,
   "intermediate_size": 512,
-  "model_type": "custom_a2_transformer",
+  "model_type": "kengurukleo_deutsch_a2_transformer",
   "torch_dtype": "float32",
   "weight_tying": true
 }
