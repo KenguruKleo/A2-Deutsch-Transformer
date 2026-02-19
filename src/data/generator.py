@@ -19,14 +19,19 @@ class A2SmartGenerator:
             "ihr": {"bin": "seid", "habe": "habt", "ending": "t"},
         }
         
-        self.time_adv = ["Heute", "Morgen", "Dann", "Jetzt", "Am Montag", "Nach der Arbeit"]
-        self.places = ["nach Hause", "nach Berlin", "ins Kino", "in die Schule", "zum Arzt"]
-        self.foods = ["Pizza", "Brot", "Eis", "Kaffee", "Apfel"]
+        self.time_adv = ["Heute", "Morgen", "Dann", "Jetzt", "Am Montag", "Nach der Arbeit", "Am Abend"]
+        self.places = ["nach Hause", "nach Berlin", "ins Kino", "in die Schule", "zum Arzt", "nach München", "in den Park", "ins Restaurant"]
+        self.foods = ["Pizza", "Brot", "Eis", "Kaffee", "Apfel", "Kuchen", "Suppe", "Bier", "Wasser", "Salat"]
         
     def get_verb_form(self, verb_stem, sub_key):
-        """Повертає правильну форму дієслова за основою та підметом."""
+        """Returns the correct verb form based on the stem and subject."""
+        # Special case for 'essen'
+        if verb_stem == "ess":
+            forms = {"ich": "esse", "du": "isst", "er": "isst", "sie": "isst", "wir": "essen", "ihr": "esst"}
+            return forms.get(sub_key, "essen")
+            
         ending = self.subjects[sub_key]["ending"]
-        # Спрощена логіка для регулярних дієслів
+        # Simplified logic for regular verbs
         if verb_stem.endswith('t') and ending in ['st', 't']:
             return verb_stem + 'e' + ending
         return verb_stem + ending
@@ -70,6 +75,35 @@ class A2SmartGenerator:
             })
         return data
 
+    def generate_wrong_partizip(self, count=1000):
+        """Generates errors where Infinitiv is used instead of Partizip II."""
+        verbs = [
+            ("gehen", "gegangen", "bin"), ("fahren", "gefahren", "bin"),
+            ("essen", "gegessen", "habe"), ("trinken", "getrunken", "habe"),
+            ("machen", "gemacht", "habe"), ("kaufen", "gekauft", "habe"),
+            ("sehen", "gesehen", "habe"), ("lesen", "gelesen", "habe")
+        ]
+        
+        data = []
+        for _ in range(count):
+            sub_key = random.choice(list(self.subjects.keys()))
+            sub = sub_key.capitalize()
+            verb_inf, verb_p2, aux_type = random.choice(verbs)
+            
+            aux = self.subjects[sub_key][aux_type]
+            obj = random.choice(self.places if aux_type == "bin" else self.foods)
+            
+            correct = f"{sub} {aux} {obj} {verb_p2}."
+            wrong = f"{sub} {aux} {obj} {verb_inf}."
+            
+            expl = f"У минулому часі (Perfekt) основне дієслово має бути у формі Partizip II ('{verb_p2}'), а не в інфінітиві ('{verb_inf}')."
+            
+            data.append({
+                "input": wrong,
+                "output": f"❌ Incorrect.\n✅ Correct: {correct}\n📝 Пояснення: {expl}"
+            })
+        return data
+
     def generate_inversion(self, count=1000):
         """Генерує помилки порядку слів (Inversion)."""
         simple_verbs = [
@@ -96,11 +130,48 @@ class A2SmartGenerator:
             })
         return data
 
+    def generate_praesens_conjugation(self, count=1000):
+        """Generates errors in present tense (Präsens) verb endings."""
+        verbs = [
+            ("spiel", "Fußball"), ("lern", "Deutsch"), 
+            ("koch", "Suppe"), ("les", "ein Buch"),
+            ("trink", "Kaffee"), ("kauf", "Brot"),
+            ("ess", "Apfel"), ("trink", "Wasser")
+        ]
+        
+        data = []
+        for _ in range(count):
+            sub_key = random.choice(list(self.subjects.keys()))
+            sub = sub_key.capitalize()
+            
+            # Pick a verb
+            verb_stem, obj = random.choice(verbs)
+            
+            # Correct form
+            correct_verb = self.get_verb_form(verb_stem, sub_key)
+            
+            # Wrong form: intentionally pick a different person's ending
+            wrong_sub_key = random.choice([k for k in self.subjects.keys() if k != sub_key])
+            wrong_verb = self.get_verb_form(verb_stem, wrong_sub_key)
+            
+            correct = f"{sub} {correct_verb} {obj}."
+            wrong = f"{sub} {wrong_verb} {obj}."
+            
+            expl = f"У теперішньому часі (Präsens) для підмета '{sub_key}' дієслово має закінчення '-{self.subjects[sub_key]['ending']}', тому правильно '{correct_verb}', а не '{wrong_verb}'."
+            
+            data.append({
+                "input": wrong,
+                "output": f"❌ Incorrect.\n✅ Correct: {correct}\n📝 Пояснення: {expl}"
+            })
+        return data
+
     def generate_all(self):
-        """Генеруємо великий набір даних."""
+        """Generates a large dataset."""
         dataset = []
-        dataset.extend(self.generate_perfekt(2500))
-        dataset.extend(self.generate_inversion(2500))
+        dataset.extend(self.generate_perfekt(3000))
+        dataset.extend(self.generate_inversion(3000))
+        dataset.extend(self.generate_wrong_partizip(3000))
+        dataset.extend(self.generate_praesens_conjugation(3000))
         random.shuffle(dataset)
         return dataset
 
