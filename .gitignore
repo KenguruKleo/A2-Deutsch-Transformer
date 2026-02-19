@@ -22,7 +22,6 @@ env/
 # Training artifacts
 checkpoints/
 *.pt
-*.pth
 *.bin
 
 # Data (generated)
