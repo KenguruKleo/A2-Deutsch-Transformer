@@ -23,7 +23,7 @@ def export_to_hf(model_path="model_final.pth", config_path="config.yaml", output
         "num_hidden_layers": config_data["model"]["n_layers"],
         "num_attention_heads": config_data["model"]["n_heads"],
         "intermediate_size": config_data["model"]["d_ff"],
-        "model_type": "git ",
+        "model_type": "deutsch_a2_transformer",
         "torch_dtype": "float32",
         "weight_tying": config_data["model"].get("weight_tying", True)
     }
