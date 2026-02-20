@@ -14,10 +14,17 @@ class SyntaxGenerator(BaseGenerator):
             v_stem, obj = random.choice(verbs)
             v_form = self.get_verb_form(v_stem, sub_key)
             
-            data.append({
-                "input": f"{adv} {sub_key} {v_form} {obj}.",
-                "output": f"❌ Incorrect.\n✅ Correct: {adv} {v_form} {sub_key} {obj}.\n📝 Пояснення: Коли речення починається з '{adv}', дієслово '{v_form}' має стояти на другому місці, перед підметом '{sub_key}'."
-            })
+            correct = f"{adv} {v_form} {sub_key} {obj}."
+            wrong = f"{adv} {sub_key} {v_form} {obj}."
+            
+            # Mix positive and negative
+            if random.random() > 0.4:
+                data.append({
+                    "input": wrong,
+                    "output": f"❌ Incorrect.\n✅ Correct: {correct}\n📝 Пояснення: Коли речення починається з '{adv}', дієслово '{v_form}' має стояти на другому місці, перед підметом '{sub_key}'."
+                })
+            else:
+                data.append({"input": correct, "output": "✅ Correct."})
         return data
 
     def generate_nebensatz_weil(self, count=1000):
@@ -31,12 +38,16 @@ class SyntaxGenerator(BaseGenerator):
         data = []
         for _ in range(count):
             sub_key, aux, obj = random.choice(reasons)
-            # Incorrect: weil ich habe Hunger.
-            # Correct: weil ich Hunger habe.
-            data.append({
-                "input": f"Ich esse, weil {sub_key} {aux} {obj}.",
-                "output": f"❌ Incorrect.\n✅ Correct: Ich esse, weil {sub_key} {obj} {aux}.\n📝 Пояснення: У підрядному реченні зі сполучником 'weil' дієслово '{aux}' має стояти в самому кінці."
-            })
+            correct = f"Ich esse, weil {sub_key} {obj} {aux}."
+            wrong = f"Ich esse, weil {sub_key} {aux} {obj}."
+            
+            if random.random() > 0.4:
+                data.append({
+                    "input": wrong,
+                    "output": f"❌ Incorrect.\n✅ Correct: {correct}\n📝 Пояснення: У підрядному реченні зі сполучником 'weil' дієслово '{aux}' має стояти в самому кінці речення."
+                })
+            else:
+                data.append({"input": correct, "output": "✅ Correct."})
         return data
 
     def generate_questions(self, count=1000):
@@ -51,15 +62,16 @@ class SyntaxGenerator(BaseGenerator):
             w_word, stem, sub_key, extra = random.choice(questions)
             v_form = self.get_verb_form(stem, sub_key)
             
-            # Correct: Wo wohnst du?
-            # Wrong: Wo du wohnst?
             correct = f"{w_word} {v_form} {sub_key}{' ' + extra if extra else ''}?"
             wrong = f"{w_word} {sub_key} {v_form}{' ' + extra if extra else ''}?"
             
-            data.append({
-                "input": wrong,
-                "output": f"❌ Incorrect.\n✅ Correct: {correct}\n📝 Пояснення: У запитаннях після питального слова '{w_word}' дієслово '{v_form}' має стояти на другому місці, перед підметом '{sub_key}'."
-            })
+            if random.random() > 0.4:
+                data.append({
+                    "input": wrong,
+                    "output": f"❌ Incorrect.\n✅ Correct: {correct}\n📝 Пояснення: У запитаннях після питального слова '{w_word}' дієслово '{v_form}' має стояти на другому місці, перед підметом '{sub_key}'."
+                })
+            else:
+                data.append({"input": correct, "output": "✅ Correct."})
         return data
 
     def generate_nebensatz_dass_wenn(self, count=1000):
