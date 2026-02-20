@@ -13,6 +13,8 @@ on:
       - 'src/model/**'
       - 'src/tokenizer/**'
       - 'hf_export/**'
+      - '.github/workflows/**'
+      - 'scripts/**'
   workflow_dispatch:
 
 jobs:
