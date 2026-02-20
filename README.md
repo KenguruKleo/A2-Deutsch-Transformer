@@ -60,21 +60,27 @@ Detailed mathematical description of all matrix transformations can be found in 
 ```text
 A2-Deutsch-Transformer/
 ├── src/
-│   ├── tokenizer/
-│   │   ├── build_vocab.py   # Script for PDF analysis and vocab creation
-│   │   ├── tokenizer.py     # Word-level tokenizer
-│   │   └── vocab.json       # Generated vocabulary (4000 tokens)
 │   ├── model/
-│   │   └── model.py         # Transformer architecture (PyTorch)
+│   │   ├── model.py                # Core Transformer architecture
+│   │   ├── configuration_custom.py # HF Config wrapper
+│   │   └── modeling_custom.py      # HF Model wrapper (custom code)
+│   ├── tokenizer/
+│   │   ├── build_vocab.py          # PDF analysis and vocab creation
+│   │   └── tokenizer.py            # Word-level tokenizer
 │   ├── data/
-│   │   └── generator.py     # Synthetic error generator
-│   ├── train.py             # Training script (optimized for MPS/M1)
-│   └── generate.py          # Generation/Inference script
+│   │   ├── generator.py            # Main synthetic data generator
+│   │   └── generators/             # Specialized topic generators
+│   ├── train.py                    # Training loop (MPS optimized)
+│   ├── generate.py                 # CLI inference script
+│   └── export_hf.py                # Hugging Face export script
+├── hf_export/                      # Bundle for HF Hub (weights + code)
+├── hf_space/                       # Bundle for HF Spaces (Gradio app)
 ├── tests/
-│   └── test_model.py        # Model architecture and device tests
-├── data/                    # Generated datasets (JSONL)
-├── data_raw/                # Raw data (PDF textbooks)
-├── docs/                    # Technical documentation
+│   └── test_model.py               # Architecture and device tests
+├── data/                           # Generated JSONL datasets
+├── data_raw/                       # Raw PDF textbooks
+├── docs/                           # Architecture and grammar docs
+├── config.yaml                     # Model & training hyperparameters
 ├── requirements.txt
 └── README.md
 ```
