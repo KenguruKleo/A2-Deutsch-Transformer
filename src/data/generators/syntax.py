@@ -95,12 +95,14 @@ class SyntaxGenerator(BaseGenerator):
         return data
 
     def generate_nebensatz_dass_wenn(self, count=1000):
-        """A2: Subordinate clauses mit dass, wenn (Verb at the end)."""
+        """A2: Subordinate clauses mit dass, wenn (Verb at the end). Includes 'Ich denke, dass...' and 'Ich glaube, dass wir Deutsch lernen' as correct."""
         conjunctions = ["dass", "wenn"]
         scenarios = [
             ("ich", "habe", "Zeit", "Ich komme,"),
+            ("du", "hast", "Zeit", "Ich denke,"),
             ("er", "ist", "krank", "Ich glaube,"),
-            ("wir", "lernen", "Deutsch", "Es ist gut,")
+            ("wir", "lernen", "Deutsch", "Ich glaube,"),
+            ("wir", "lernen", "Deutsch", "Es ist gut,"),
         ]
         data = []
         for _ in range(count):
@@ -108,27 +110,30 @@ class SyntaxGenerator(BaseGenerator):
             conj = random.choice(conjunctions)
             
             if random.random() > 0.5:
-                # Error: Verb not in the end
                 data.append({
                     "input": f"{main} {conj} {sub} {verb} {obj}.",
                     "output": f"❌ Incorrect.\n✅ Correct: {main} {conj} {sub} {obj} {verb}.\n📝 Пояснення: У підрядному реченні зі сполучником '{conj}' дієслово '{verb}' має стояти в самому кінці речення."
                 })
             else:
-                # Correct: Verb at the end
                 data.append({"input": f"{main} {conj} {sub} {obj} {verb}.", "output": "✅ Correct."})
         return data
 
     def generate_negation(self, count=1000):
-        """A1: Negation with 'nicht' vs 'kein'."""
-        nouns = [("Hunger", "m"), ("Auto", "n"), ("Zeit", "f")]
-        adjectives = [("gut", "Das ist"), ("kalt", "Es ist")]
+        """A1: Negation with 'nicht' vs 'kein'. Covers kein/keine/keinen (Akk) after haben."""
+        # (noun, gender) -> after "Ich habe" use: keinen (m), kein (n), keine (f)
+        nouns = [
+            ("Hunger", "m"), ("Durst", "m"), ("Appetit", "m"),
+            ("Auto", "n"), ("Geld", "n"), ("Brot", "n"), ("Buch", "n"),
+            ("Zeit", "f"), ("Luft", "f"), ("Milch", "f"), ("Arbeit", "f"),
+        ]
+        adjectives = [("gut", "Das ist"), ("kalt", "Es ist"), ("teuer", "Das ist"), ("schnell", "Er ist")]
         
         data = []
         for _ in range(count):
             if random.random() > 0.5:
-                # Noun negation (should be kein)
+                # Noun negation (should be kein/keine/keinen in Akkusativ)
                 noun, gender = random.choice(nouns)
-                c_neg = "kein" if gender != "f" else "keine"
+                c_neg = "keinen" if gender == "m" else ("keine" if gender == "f" else "kein")
                 if random.random() > 0.5:
                     data.append({
                         "input": f"Ich habe nicht {noun}.",

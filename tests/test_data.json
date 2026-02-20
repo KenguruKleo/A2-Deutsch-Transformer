@@ -271,5 +271,32 @@
   {"id": 224, "input": "Ich bin während des Tages müde.", "expected_type": "correct", "expected_correction": null, "topic": "genitiv", "level": "A2"},
   {"id": 225, "input": "Ich bin während dem Tages müde.", "expected_type": "incorrect", "expected_correction": "Ich bin während des Tages müde.", "topic": "genitiv", "level": "A2"},
   {"id": 226, "input": "Ich bin wegen der Arbeit müde.", "expected_type": "correct", "expected_correction": null, "topic": "genitiv", "level": "A2"},
-  {"id": 227, "input": "Ich bin wegen die Arbeit müde.", "expected_type": "incorrect", "expected_correction": "Ich bin wegen der Arbeit müde.", "topic": "genitiv", "level": "A2"}
+  {"id": 227, "input": "Ich bin wegen die Arbeit müde.", "expected_type": "incorrect", "expected_correction": "Ich bin wegen der Arbeit müde.", "topic": "genitiv", "level": "A2"},
+
+  {"id": 228, "input": "Ich habe Auto.", "expected_type": "incorrect", "expected_correction": "Ich habe ein Auto.", "topic": "akkusativ", "level": "A1"},
+  {"id": 229, "input": "Ich habe ein Auto.", "expected_type": "correct", "expected_correction": null, "topic": "akkusativ", "level": "A1"},
+
+  {"id": 230, "input": "Er will morgen Deutsch lernen.", "expected_type": "correct", "expected_correction": null, "topic": "modal", "level": "A1"},
+  {"id": 231, "input": "Er will morgen lernen Deutsch.", "expected_type": "incorrect", "expected_correction": "Er will morgen Deutsch lernen.", "topic": "modal", "level": "A1"},
+  {"id": 232, "input": "Ich muss heute nach Hause gehen.", "expected_type": "correct", "expected_correction": null, "topic": "modal", "level": "A1"},
+  {"id": 233, "input": "Ich muss heute gehen nach Hause.", "expected_type": "incorrect", "expected_correction": "Ich muss heute nach Hause gehen.", "topic": "modal", "level": "A1"},
+
+  {"id": 234, "input": "Du schläfst.", "expected_type": "correct", "expected_correction": null, "topic": "strong_verbs", "level": "A1"},
+  {"id": 235, "input": "Du schlafst.", "expected_type": "incorrect", "expected_correction": "Du schläfst.", "topic": "strong_verbs", "level": "A1"},
+  {"id": 236, "input": "Er schläft.", "expected_type": "correct", "expected_correction": null, "topic": "strong_verbs", "level": "A1"},
+  {"id": 237, "input": "Er schlaft.", "expected_type": "incorrect", "expected_correction": "Er schläft.", "topic": "strong_verbs", "level": "A1"},
+  {"id": 238, "input": "Du fährst nach Berlin.", "expected_type": "correct", "expected_correction": null, "topic": "strong_verbs", "level": "A1"},
+  {"id": 239, "input": "Du fahrst nach Berlin.", "expected_type": "incorrect", "expected_correction": "Du fährst nach Berlin.", "topic": "strong_verbs", "level": "A1"},
+
+  {"id": 240, "input": "Sie ist gekommen.", "expected_type": "correct", "expected_correction": null, "topic": "perfekt_aux", "level": "A2"},
+  {"id": 241, "input": "Sie hat gekommen.", "expected_type": "incorrect", "expected_correction": "Sie ist gekommen.", "topic": "perfekt_aux", "level": "A2"},
+  {"id": 242, "input": "Ich bin geblieben.", "expected_type": "correct", "expected_correction": null, "topic": "perfekt_aux", "level": "A2"},
+  {"id": 243, "input": "Ich habe geblieben.", "expected_type": "incorrect", "expected_correction": "Ich bin geblieben.", "topic": "perfekt_aux", "level": "A2"},
+
+  {"id": 244, "input": "Ich bin bei der Arbeit.", "expected_type": "correct", "expected_correction": null, "topic": "fixed_prepositions", "level": "A2"},
+  {"id": 245, "input": "Ich bin in der Arbeit.", "expected_type": "incorrect", "expected_correction": "Ich bin bei der Arbeit.", "topic": "fixed_prepositions", "level": "A2"},
+  {"id": 246, "input": "Er ist auf der Arbeit.", "expected_type": "correct", "expected_correction": null, "topic": "fixed_prepositions", "level": "A2"},
+
+  {"id": 247, "input": "Ich habe kein Geld.", "expected_type": "correct", "expected_correction": null, "topic": "negation", "level": "A1"},
+  {"id": 248, "input": "Ich habe nicht Geld.", "expected_type": "incorrect", "expected_correction": "Ich habe kein Geld.", "topic": "negation", "level": "A1"}
 ]

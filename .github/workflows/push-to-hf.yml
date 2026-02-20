@@ -1,0 +1,62 @@
+# Push exported model to Hugging Face Hub.
+# Requires repository secret: HF_TOKEN (with write access to the repo).
+# Expects model_final.pth and config.yaml in the repo (commit them or ensure they exist on the branch).
+name: Push model to Hugging Face
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'model_final.pth'
+      - 'config.yaml'
+      - 'src/export_hf.py'
+      - 'src/model/**'
+      - 'src/tokenizer/**'
+      - 'hf_export/**'
+  workflow_dispatch:
+
+jobs:
+  push-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install torch pyyaml safetensors huggingface_hub
+
+      - name: Export to HF bundle
+        run: python src/export_hf.py
+        env:
+          # Optional: skip if no model (e.g. in forks)
+          SKIP_EXPORT: false
+
+      - name: Push to Hugging Face Hub
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HG_TOKEN: ${{ secrets.HG_TOKEN }}
+        run: |
+          TOKEN="${HF_TOKEN:-$HG_TOKEN}"
+          if [ -z "$TOKEN" ]; then
+            echo "::warning::Add HF_TOKEN or HG_TOKEN in Settings → Secrets and Actions."
+            exit 0
+          fi
+          export TOKEN
+          pip install huggingface_hub -q
+          python -c "
+import os
+from huggingface_hub import HfApi
+api = HfApi()
+api.upload_folder(
+    folder_path='hf_export',
+    repo_id='kengurukleo/deutsch_a2_transformer',
+    repo_type='model',
+    token=os.environ.get('TOKEN', '').strip() or None,
+)
+print('Uploaded hf_export/ to kengurukleo/deutsch_a2_transformer')
+"

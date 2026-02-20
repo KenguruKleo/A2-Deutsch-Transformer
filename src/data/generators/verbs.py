@@ -42,6 +42,7 @@ class VerbGenerator(BaseGenerator):
             # With definite article (Akkusativ)
             ("das Auto", "n"), ("den Hund", "m"), ("die Katze", "f"),
             ("das Buch", "n"), ("den Schlüssel", "m"), ("die Tasche", "f"),
+            ("das Handy", "n"),
             # Without article
             ("Hunger", None), ("Zeit", None), ("Durst", None), ("Geld", None)
         ]
@@ -87,10 +88,14 @@ class VerbGenerator(BaseGenerator):
         return data
 
     def generate_perfekt_aux(self, count=1000):
-        """A2: Haben vs Sein errors in Perfekt."""
+        """A2: Haben vs Sein errors in Perfekt. Includes trinken->getrunken (haben, not sein)."""
         verbs_sein = [("gehen", "gegangen"), ("fahren", "gefahren"), ("kommen", "gekommen")]
-        verbs_haben = [("essen", "gegessen"), ("machen", "gemacht"), ("kaufen", "gekauft")]
-        
+        verbs_haben = [
+            ("essen", "gegessen"),
+            ("machen", "gemacht"),
+            ("kaufen", "gekauft"),
+            ("trinken", "getrunken"),
+        ]
         data = []
         for _ in range(count):
             sub_key = random.choice(list(self.subjects.keys()))
@@ -98,7 +103,7 @@ class VerbGenerator(BaseGenerator):
             is_movement = random.random() > 0.5
             verb_inf, verb_p2 = random.choice(verbs_sein if is_movement else verbs_haben)
             c_aux = self.subjects[sub_key]["bin" if is_movement else "habe"]
-            item = random.choice(self.nouns["place" if is_movement else "food"])[0]
+            item = random.choice(self.nouns["place" if is_movement else "food"])[0] if is_movement or verb_p2 != "getrunken" else random.choice(["Kaffee", "Bier", "Tee", "Wasser"])
             
             if random.random() > 0.5:
                 w_aux = self.subjects[sub_key]["habe" if is_movement else "bin"]
@@ -131,14 +136,49 @@ class VerbGenerator(BaseGenerator):
                 data.append({"input": f"{dn} {aux} {obj} {p2}.", "output": "✅ Correct."})
         return data
 
+    def generate_strong_verbs_praesens(self, count=500):
+        """A1: Strong verbs — vowel change in 2nd/3rd person (schlafen->schläfst/schläft, fahren->fährst/fährt)."""
+        # (inf, (ich, du, er, sie, wir, ihr), (wrong_du, wrong_er))
+        verbs = [
+            ("schlafen", ("schlafe", "schläfst", "schläft", "schläft", "schlafen", "schlaft"), ("schlafst", "schlaft")),
+            ("fahren", ("fahre", "fährst", "fährt", "fährt", "fahren", "fahrt"), ("fahrst", "fahrt")),
+        ]
+        subs = ["ich", "du", "er", "sie", "wir", "ihr"]
+        extras = ["nach Berlin", "nach Hause", "gut"]
+        data = []
+        for _ in range(count):
+            inf, forms, wrong_du_er = random.choice(verbs)
+            sub_key = random.choice(subs)
+            dn = self.get_display_name(sub_key)
+            idx = subs.index(sub_key)
+            correct_v = forms[idx]
+            extra = random.choice(extras) if random.random() > 0.4 else ""
+            tail = f" {extra}." if extra else "."
+            if random.random() > 0.5 and sub_key in ("du", "er", "sie"):
+                wrong_v = wrong_du_er[0] if sub_key == "du" else wrong_du_er[1]
+                data.append({
+                    "input": f"{dn} {wrong_v}{tail}",
+                    "output": f"❌ Incorrect.\n✅ Correct: {dn} {correct_v}{tail}\n📝 Пояснення: Дієслово '{inf}' — сильне, у 2-й та 3-й особі однини коренева голосна змінюється (ä). Правильно '{correct_v}', а не '{wrong_v}'."
+                })
+            else:
+                data.append({"input": f"{dn} {correct_v}{tail}", "output": "✅ Correct."})
+        return data
+
     def generate_modal_verbs(self, count=1000):
-        """A1/A2: Modal verbs."""
+        """A1/A2: Modal verbs. Includes modal + adverb + object + infinitive (e.g. Er will morgen Deutsch lernen, Ich muss heute nach Hause gehen)."""
         modals = {
             "können": {"ich": "kann", "du": "kannst", "er": "kann", "sie": "kann", "wir": "können", "ihr": "könnt", "sie_plural": "können"},
             "müssen": {"ich": "muss", "du": "musst", "er": "muss", "sie": "muss", "wir": "müssen", "ihr": "müsst", "sie_plural": "müssen"},
             "wollen": {"ich": "will", "du": "willst", "er": "will", "sie": "will", "wir": "wollen", "ihr": "wollt", "sie_plural": "wollen"}
         }
-        main_verbs = [("Deutsch sprechen", "sprechen"), ("nach Hause gehen", "gehen"), ("Suppe kochen", "kochen")]
+        # phrase (with optional adverb), v_inf
+        main_verbs = [
+            ("Deutsch sprechen", "sprechen"),
+            ("nach Hause gehen", "gehen"),
+            ("Suppe kochen", "kochen"),
+            ("morgen Deutsch lernen", "lernen"),
+            ("heute nach Hause gehen", "gehen"),
+        ]
         data = []
         for _ in range(count):
             sub_key = random.choice(list(self.subjects.keys()))
@@ -149,7 +189,6 @@ class VerbGenerator(BaseGenerator):
             
             rand = random.random()
             if rand > 0.7:
-                # Error: Wrong conjugation
                 wrong_sub = random.choice([k for k in self.subjects.keys() if k != sub_key])
                 wrong_m = modals[m_inf][wrong_sub]
                 data.append({
@@ -157,9 +196,11 @@ class VerbGenerator(BaseGenerator):
                     "output": f"❌ Incorrect.\n✅ Correct: {dn} {m_form} {phrase}.\n📝 Пояснення: Модальне дієслово '{m_inf}' для підмета '{dn}' має форму '{m_form}'."
                 })
             elif rand > 0.4 and " " in phrase:
-                # Error: Position
                 parts = phrase.split()
-                wrong_phrase = f"{parts[1]} {parts[0]}"
+                if len(parts) == 3:
+                    wrong_phrase = f"{parts[0]} {parts[2]} {parts[1]}"
+                else:
+                    wrong_phrase = f"{parts[1]} {parts[0]}" if len(parts) >= 2 else phrase
                 data.append({
                     "input": f"{dn} {m_form} {wrong_phrase}.",
                     "output": f"❌ Incorrect.\n✅ Correct: {dn} {m_form} {phrase}.\n📝 Пояснення: У реченнях з модальним дієсловом ('{m_form}') основне дієслово ('{v_inf}') має стояти в самому кінці речення в інфінітиві."
@@ -220,8 +261,14 @@ class VerbGenerator(BaseGenerator):
         return data
 
     def generate_praeteritum_essentials(self, count=1000):
-        """A2: Präteritum."""
-        scenarios = [("war", "sein", "gestern zu Hause"), ("hatte", "haben", "viel Arbeit"), ("war", "sein", "sehr müde"), ("hatte", "haben", "Hunger")]
+        """A2: Präteritum. Includes 'Ich war müde' (correct, without 'sehr')."""
+        scenarios = [
+            ("war", "sein", "gestern zu Hause"),
+            ("hatte", "haben", "viel Arbeit"),
+            ("war", "sein", "sehr müde"),
+            ("war", "sein", "müde"),
+            ("hatte", "haben", "Hunger"),
+        ]
         data = []
         for _ in range(count):
             sub_key = random.choice(list(self.subjects.keys()))
@@ -241,22 +288,29 @@ class VerbGenerator(BaseGenerator):
         return data
 
     def generate_imperativ(self, count=1000):
-        """A1/A2: Imperativ."""
-        verbs = [("gehen", "Geh", "Geht", "Gehen Sie"), ("machen", "Mach", "Macht", "Machen Sie")]
+        """A1/A2: Imperativ — du, ihr, Sie. Correct: Geh!, Macht!, Geht!, Machen Sie! etc."""
+        verbs = [
+            ("gehen", "Geh", "Geht", "Gehen Sie"),
+            ("machen", "Mach", "Macht", "Machen Sie"),
+            ("kommen", "Komm", "Kommt", "Kommen Sie"),
+            ("lesen", "Lies", "Lest", "Lesen Sie"),
+        ]
         data = []
         for _ in range(count):
             inf, du, ihr, sie = random.choice(verbs)
             rand = random.random()
-            if rand > 0.7:
+            if rand > 0.75:
                 data.append({
-                    "input": f"Du {inf[:-2]}st!",
+                    "input": f"Du {inf[:-2]}st!" if inf != "lesen" else "Du liest!",
                     "output": f"❌ Incorrect.\n✅ Correct: {du}!\n📝 Пояснення: У наказовому способі (Imperativ) для 'du' закінчення '-st' та займенник 'du' відкидаються."
                 })
-            elif rand > 0.4:
+            elif rand > 0.5:
                 data.append({
                     "input": f"Ihr {inf}!",
                     "output": f"❌ Incorrect.\n✅ Correct: {ihr}!\n📝 Пояснення: У наказовому способі (Imperativ) для 'ihr' дієслово має закінчення '-t', але без займенника 'ihr'."
                 })
             else:
-                data.append({"input": f"{du}!", "output": "✅ Correct."})
+                # Correct: randomly du, ihг, or Sie form
+                correct_form = random.choice([du, ihr, sie])
+                data.append({"input": f"{correct_form}!", "output": "✅ Correct."})
         return data

@@ -252,6 +252,27 @@ If you want to re-export the model or publish your own version:
    ```bash
    huggingface-cli upload kengurukleo/deutsch_a2_transformer ./hf_export .
    ```
+   Or push to `main` and let the GitHub Action do it (see below).
+
+### Pre-commit: auto-export HF model on every commit
+To regenerate `hf_export/` automatically before each commit (so the bundle always matches `model_final.pth`):
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+After that, every `git commit` will run `python src/export_hf.py` and stage `hf_export/`. If `model_final.pth` is missing, the hook skips without blocking the commit.
+
+### GitHub Action: push model to Hugging Face
+The workflow [`.github/workflows/push-to-hf.yml`](.github/workflows/push-to-hf.yml) pushes `hf_export/` to [kengurukleo/deutsch_a2_transformer](https://huggingface.co/kengurukleo/deutsch_a2_transformer) when you push to `main` (if relevant files changed) or when you run it manually (**Actions → Push model to Hugging Face → Run workflow**).
+
+**Required:** Add a repository secret with a Hugging Face write token:
+- **Settings → Secrets and variables → Actions → New repository secret**
+- Name: `HF_TOKEN` or `HG_TOKEN`
+- Value: your token from [https://huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) (with write access)
+
+The workflow expects `model_final.pth` and `config.yaml` to be in the repo (e.g. committed after training).
 
 ## Data Format (JSONL)
 

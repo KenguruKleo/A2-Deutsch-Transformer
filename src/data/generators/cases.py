@@ -73,6 +73,33 @@ class CaseGenerator(BaseGenerator):
                 data.append({"input": f"Ich {verb} {c_art} {noun}.", "output": "✅ Correct."})
         return data
 
+    def generate_article_required_akkusativ(self, count=500):
+        """A1: After haben/brauchen etc. countable noun needs article (ein/das). Wrong: 'Ich habe Auto' without article."""
+        verbs = [("habe", "haben"), ("brauche", "brauchen"), ("kaufe", "kaufen"), ("sehe", "sehen")]
+        # (noun, gender), def_akk = den/das/die, indef_akk = einen/ein/eine
+        nouns = [
+            ("Auto", "n"), ("Buch", "n"), ("Handy", "n"),
+            ("Hund", "m"), ("Apfel", "m"), ("Computer", "m"),
+            ("Katze", "f"), ("Tasche", "f"), ("Schwester", "f"),
+        ]
+        def_art = {"m": "den", "n": "das", "f": "die"}
+        indef_art = {"m": "einen", "n": "ein", "f": "eine"}
+        data = []
+        for _ in range(count):
+            verb, v_inf = random.choice(verbs)
+            noun, gender = random.choice(nouns)
+            use_definite = random.random() > 0.5
+            art = def_art[gender] if use_definite else indef_art[gender]
+            if random.random() > 0.5:
+                # Wrong: no article
+                data.append({
+                    "input": f"Ich {verb} {noun}.",
+                    "output": f"❌ Incorrect.\n✅ Correct: Ich {verb} {art} {noun}.\n📝 Пояснення: Дієслово '{v_inf}' вимагає Akkusativ. Злічний іменник '{noun}' потребує артикля (наприклад '{art}') — не можна опускати."
+                })
+            else:
+                data.append({"input": f"Ich {verb} {art} {noun}.", "output": "✅ Correct."})
+        return data
+
     def generate_dativ(self, count=1000):
         """A2: Dativ for all genders. Correct: dem (m/n), der (f). Wrong: Akkusativ or wrong gender."""
         verbs_dat = [("helfe", "helfen"), ("antworte", "antworten"), ("danke", "danken")]
@@ -131,26 +158,26 @@ class CaseGenerator(BaseGenerator):
         return data
 
     def generate_prepositions_akk_dat(self, count=1000):
-        """A2: Wechselpräpositionen — in/auf with Akkusativ (direction) vs Dativ (location). All genders."""
-        # (verb, prep, noun, gender, case, c_art, list of wrong articles, logic)
+        """A2: Wechselpräpositionen — in/auf with Akkusativ (direction) vs Dativ (location). All genders. Subject+verb match."""
+        # (subject_display, verb, prep, noun, gender, case, c_art, wrong_list, logic)
         scenarios = [
-            ("gehe", "in", "Kino", "n", "Akkusativ", "das", ["dem", "der", "die"], "Куди? (двигун)"),
-            ("bin", "in", "Kino", "n", "Dativ", "dem", ["das", "den", "der", "die"], "Де? (статика)"),
-            ("lege", "auf", "Tisch", "m", "Akkusativ", "den", ["dem", "die", "das"], "Куди?"),
-            ("liegt", "auf", "Tisch", "m", "Dativ", "dem", ["den", "die", "das", "der"], "Де?"),
-            ("gehe", "in", "Küche", "f", "Akkusativ", "die", ["der", "dem", "den", "das"], "Куди?"),
-            ("bin", "in", "Küche", "f", "Dativ", "der", ["die", "dem", "den", "das"], "Де?"),
-            ("gehe", "in", "Park", "m", "Akkusativ", "den", ["dem", "die", "das"], "Куди?"),
-            ("bin", "in", "Park", "m", "Dativ", "dem", ["den", "die", "das"], "Де?"),
-            ("stelle", "auf", "Bank", "f", "Akkusativ", "die", ["der", "dem", "den"], "Куди?"),
-            ("liegt", "auf", "Bank", "f", "Dativ", "der", ["die", "dem", "den"], "Де?"),
+            ("Ich", "gehe", "in", "Kino", "n", "Akkusativ", "das", ["dem", "der", "die"], "Куди? (двигун)"),
+            ("Ich", "bin", "in", "Kino", "n", "Dativ", "dem", ["das", "den", "der", "die"], "Де? (статика)"),
+            ("Ich", "lege", "auf", "Tisch", "m", "Akkusativ", "den", ["dem", "die", "das"], "Куди?"),
+            ("Er", "legt", "auf", "Tisch", "m", "Akkusativ", "den", ["dem", "die", "das"], "Куди?"),
+            ("Er", "liegt", "auf", "Tisch", "m", "Dativ", "dem", ["den", "die", "das", "der"], "Де?"),
+            ("Ich", "gehe", "in", "Küche", "f", "Akkusativ", "die", ["der", "dem", "den", "das"], "Куди?"),
+            ("Ich", "bin", "in", "Küche", "f", "Dativ", "der", ["die", "dem", "den", "das"], "Де?"),
+            ("Ich", "gehe", "in", "Park", "m", "Akkusativ", "den", ["dem", "die", "das"], "Куди?"),
+            ("Ich", "bin", "in", "Park", "m", "Dativ", "dem", ["den", "die", "das"], "Де?"),
+            ("Ich", "stelle", "auf", "Bank", "f", "Akkusativ", "die", ["der", "dem", "den"], "Куди?"),
+            ("Sie", "stellt", "auf", "Bank", "f", "Akkusativ", "die", ["der", "dem", "den"], "Куди?"),
+            ("Sie", "liegt", "auf", "Bank", "f", "Dativ", "der", ["die", "dem", "den"], "Де?"),
         ]
         gender_names = {"m": "чоловічого", "n": "середнього", "f": "жіночого"}
         data = []
         for _ in range(count):
-            sub_key = random.choice(list(self.subjects.keys()))
-            dn = self.get_display_name(sub_key)
-            v, prep, noun, gender, case, c_art, wrong_list, logic = random.choice(scenarios)
+            dn, v, prep, noun, gender, case, c_art, wrong_list, logic = random.choice(scenarios)
             w_art = random.choice(wrong_list)
             if random.random() > 0.5:
                 data.append({
@@ -162,13 +189,42 @@ class CaseGenerator(BaseGenerator):
         return data
 
     def generate_adjective_endings(self, count=1000):
-        """A2: Adjective endings."""
-        adjectives = [("gut", "er", "m"), ("neu", "es", "n"), ("schön", "e", "f")]
-        nouns = {"m": "Mann", "n": "Auto", "f": "Frau"}
+        """A2: Adjective endings after 'ein'/'eine' in Nominativ. Includes 'eine schöne Frau' (not 'eine schön Frau')."""
+        # (adj, ending_m, ending_n, ending_f, noun_m, noun_n, noun_f)
+        variants = [
+            ("gut", "er", "es", "e", "Mann", "Buch", "Frau"),
+            ("gut", "er", "es", "e", "Tisch", "Auto", "Tasche"),
+            ("neu", "er", "es", "e", "Mann", "Buch", "Frau"),
+            ("neu", "er", "es", "e", "Tisch", "Auto", "Tasche"),
+            ("schön", "er", "es", "e", "Mann", "Buch", "Frau"),
+        ]
+        # feminine with "eine": (adj, ending_f, noun_f)
+        eine_variants = [
+            ("schön", "e", "Frau"),
+            ("gut", "e", "Frau"),
+            ("neu", "e", "Tasche"),
+        ]
         data = []
         for _ in range(count):
-            adj, ending, gender = random.choice(adjectives)
-            noun = nouns[gender]
+            if random.random() < 0.2:
+                adj, end_f, noun = random.choice(eine_variants)
+                correct = f"Das ist eine {adj}{end_f} {noun}."
+                if random.random() > 0.5:
+                    data.append({
+                        "input": f"Das ist eine {adj} {noun}.",
+                        "output": f"❌ Incorrect.\n✅ Correct: {correct}\n📝 Пояснення: Після артикля 'eine' у Nominativ прикметник '{adj}' отримує закінчення '-{end_f}' (eine schöne Frau)."
+                    })
+                else:
+                    data.append({"input": correct, "output": "✅ Correct."})
+                continue
+            adj, end_m, end_n, end_f, noun_m, noun_n, noun_f = random.choice(variants)
+            gender = random.choice(["m", "n", "f"])
+            if gender == "m":
+                ending, noun = end_m, noun_m
+            elif gender == "n":
+                ending, noun = end_n, noun_n
+            else:
+                ending, noun = end_f, noun_f
             correct = f"Das ist ein {adj}{ending} {noun}."
             if random.random() > 0.5:
                 data.append({
@@ -205,8 +261,13 @@ class CaseGenerator(BaseGenerator):
         return data
 
     def generate_komparation(self, count=1000):
-        """A2: Comparison."""
-        adjectives = [("gut", "besser"), ("viel", "mehr"), ("schnell", "schneller")]
+        """A2: Comparison — correct comparatives (größer, kleiner, besser, schneller, älter) vs wrong 'mehr + adj'."""
+        # (positive, comparative) — irregular and regular
+        adjectives = [
+            ("gut", "besser"), ("viel", "mehr"), ("schnell", "schneller"),
+            ("groß", "größer"), ("klein", "kleiner"), ("alt", "älter"),
+            ("warm", "wärmer"), ("kalt", "kälter"), ("jung", "jünger"),
+        ]
         data = []
         for _ in range(count):
             adj, comp = random.choice(adjectives)
@@ -230,12 +291,24 @@ class CaseGenerator(BaseGenerator):
         ]
         # Akkusativ: (prep, (noun, gender, c_art, wrong_articles))
         preps_akk = [
-            ("für", [("Mann", "m", "den", ["dem", "der", "die", "das"]), ("Frau", "f", "die", ["der", "dem", "den", "das"]), ("Kind", "n", "das", ["dem", "der", "die"])]),
+            ("für", [("Mann", "m", "den", ["dem", "der", "die", "das"]), ("Freund", "m", "den", ["dem", "der", "die", "das"]), ("Frau", "f", "die", ["der", "dem", "den", "das"]), ("Kind", "n", "das", ["dem", "der", "die"])]),
             ("ohne", [("Hund", "m", "den", ["dem", "der", "die", "das"]), ("Tasche", "f", "die", ["der", "dem", "den", "das"]), ("Auto", "n", "das", ["dem", "der", "die"])]),
             ("gegen", [("Tisch", "m", "den", ["dem", "der", "die"]), ("Wand", "f", "die", ["der", "dem", "den"]), ("Fenster", "n", "das", ["dem", "der", "die"])]),
         ]
+        # Fixed phrases: (correct, wrong, explanation) — e.g. "at work" = bei der Arbeit, not in der Arbeit
+        fixed_phrases = [
+            ("Ich bin bei der Arbeit.", "Ich bin in der Arbeit.", "Для значення «на роботі» (at work) використовується прийменник 'bei', а не 'in'. Правильно: bei der Arbeit."),
+            ("Er ist auf der Arbeit.", "Er ist in der Arbeit.", "Для «на роботі» можна сказати 'auf der Arbeit' або 'bei der Arbeit'; 'in der Arbeit' тут не вживається."),
+        ]
         data = []
         for _ in range(count):
+            if random.random() < 0.12:
+                correct, wrong, expl = random.choice(fixed_phrases)
+                if random.random() > 0.5:
+                    data.append({"input": wrong, "output": f"❌ Incorrect.\n✅ Correct: {correct}\n📝 Пояснення: {expl}"})
+                else:
+                    data.append({"input": correct, "output": "✅ Correct."})
+                continue
             is_dat = random.random() > 0.5
             prep, noun_list = random.choice(preps_dat if is_dat else preps_akk)
             noun, gender, c_art, wrong_articles = random.choice(noun_list)
