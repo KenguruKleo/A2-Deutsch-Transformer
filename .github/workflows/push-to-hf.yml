@@ -45,8 +45,8 @@ jobs:
         run: |
           TOKEN="${HF_TOKEN:-$HG_TOKEN}"
           if [ -z "$TOKEN" ]; then
-            echo "::warning::Add HF_TOKEN or HG_TOKEN in Settings → Secrets and Actions."
-            exit 0
+            echo "::error::Add HF_TOKEN or HG_TOKEN in Settings → Secrets and Actions (write token from https://huggingface.co/settings/tokens)"
+            exit 1
           fi
           export TOKEN
           pip install huggingface_hub -q
