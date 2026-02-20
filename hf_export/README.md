@@ -62,7 +62,6 @@ The model covers over 18 essential grammar topics for A1 and A2 levels.
 ## 📖 How to Use
 Since this model uses a custom architecture, you must enable `trust_remote_code=True`.
 
-
 ```python
 from transformers import AutoModelForCausalLM
 

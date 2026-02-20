@@ -1,4 +1,4 @@
-# Push committed hf_export/ to Hugging Face Hub.
+# Push committed hf_export/ to Hugging Face Hub, then restart the demo Space.
 # Export is done locally by pre-commit (scripts/export_hf_precommit.sh).
 # Requires repository secret: HF_TOKEN or HG_TOKEN (write token).
 name: Push model to Hugging Face
@@ -51,3 +51,17 @@ jobs:
           export TOKEN
           pip install huggingface_hub -q
           python scripts/upload_to_hf.py
+
+      - name: Restart Space (deutsch-a2-tutor)
+        if: steps.check.outputs.exists == 'true'
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HG_TOKEN: ${{ secrets.HG_TOKEN }}
+        run: |
+          TOKEN="${HF_TOKEN:-$HG_TOKEN}"
+          if [ -n "$TOKEN" ]; then
+            pip install huggingface_hub -q
+            python -c "from huggingface_hub import HfApi; import os; api = HfApi(token=os.environ.get('HF_TOKEN') or os.environ.get('HG_TOKEN')); api.restart_space(repo_id='kengurukleo/deutsch-a2-tutor'); print('Space restart requested.')"
+          else
+            echo "::notice::Skipping Space restart (no token)."
+          fi
