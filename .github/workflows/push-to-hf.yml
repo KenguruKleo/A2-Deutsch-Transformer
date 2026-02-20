@@ -23,22 +23,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check for model
+        id: model
+        run: echo "exists=$([ -f model_final.pth ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Skip (no model)
+        if: steps.model.outputs.exists != 'true'
+        run: echo "::notice::model_final.pth not in repo — export and push skipped. Commit the model to push to HF."
+
       - name: Set up Python
+        if: steps.model.outputs.exists == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install dependencies
+        if: steps.model.outputs.exists == 'true'
         run: |
           pip install torch pyyaml safetensors huggingface_hub
 
       - name: Export to HF bundle
+        if: steps.model.outputs.exists == 'true'
         run: python src/export_hf.py
-        env:
-          # Optional: skip if no model (e.g. in forks)
-          SKIP_EXPORT: false
 
       - name: Push to Hugging Face Hub
+        if: steps.model.outputs.exists == 'true'
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HG_TOKEN: ${{ secrets.HG_TOKEN }}
