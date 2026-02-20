@@ -247,5 +247,29 @@
   {"id": 202, "input": "Du habe das Handy.", "expected_type": "incorrect", "expected_correction": "Du hast das Handy.", "topic": "haben_sein", "level": "A1"},
   {"id": 203, "input": "Ich habe den Schlüssel.", "expected_type": "correct", "expected_correction": null, "topic": "akkusativ", "level": "A1"},
   {"id": 204, "input": "Ich brauche der Tasche.", "expected_type": "incorrect", "expected_correction": "Ich brauche die Tasche.", "topic": "akkusativ", "level": "A1"},
-  {"id": 205, "input": "Er antwortet dem Mann.", "expected_type": "correct", "expected_correction": null, "topic": "dativ", "level": "A2"}
+  {"id": 205, "input": "Er antwortet dem Mann.", "expected_type": "correct", "expected_correction": null, "topic": "dativ", "level": "A2"},
+  {"id": 206, "input": "Ich habe die Auto.", "expected_type": "incorrect", "expected_correction": "Ich habe das Auto.", "topic": "akkusativ", "level": "A1"},
+  {"id": 207, "input": "Ich habe der Auto.", "expected_type": "incorrect", "expected_correction": "Ich habe das Auto.", "topic": "akkusativ", "level": "A1"},
+  {"id": 208, "input": "Ich helfe die Mutter.", "expected_type": "incorrect", "expected_correction": "Ich helfe der Mutter.", "topic": "dativ", "level": "A2"},
+  {"id": 209, "input": "Er dankt das Kind.", "expected_type": "incorrect", "expected_correction": "Er dankt dem Kind.", "topic": "dativ", "level": "A2"},
+  {"id": 210, "input": "Ich gehe in die Küche.", "expected_type": "correct", "expected_correction": null, "topic": "wechselpraep", "level": "A2"},
+  {"id": 211, "input": "Ich bin in der Küche.", "expected_type": "correct", "expected_correction": null, "topic": "wechselpraep", "level": "A2"},
+  {"id": 212, "input": "Ich gehe in der Küche.", "expected_type": "incorrect", "expected_correction": "Ich gehe in die Küche.", "topic": "wechselpraep", "level": "A2"},
+  {"id": 213, "input": "Ich gehe für die Frau.", "expected_type": "correct", "expected_correction": null, "topic": "fixed_prepositions", "level": "A2"},
+  {"id": 214, "input": "Ich gehe für der Frau.", "expected_type": "incorrect", "expected_correction": "Ich gehe für die Frau.", "topic": "fixed_prepositions", "level": "A2"},
+  {"id": 215, "input": "Ich gehe ohne das Auto.", "expected_type": "correct", "expected_correction": null, "topic": "fixed_prepositions", "level": "A2"},
+  {"id": 216, "input": "Ich gehe mit der Tante.", "expected_type": "correct", "expected_correction": null, "topic": "fixed_prepositions", "level": "A2"},
+  {"id": 217, "input": "Ich gehe mit die Tante.", "expected_type": "incorrect", "expected_correction": "Ich gehe mit der Tante.", "topic": "fixed_prepositions", "level": "A2"},
+
+  {"id": 218, "input": "Der Mann kommt.", "expected_type": "correct", "expected_correction": null, "topic": "nominativ", "level": "A1"},
+  {"id": 219, "input": "Die Mann kommt.", "expected_type": "incorrect", "expected_correction": "Der Mann kommt.", "topic": "nominativ", "level": "A1"},
+  {"id": 220, "input": "Die Frau geht.", "expected_type": "correct", "expected_correction": null, "topic": "nominativ", "level": "A1"},
+  {"id": 221, "input": "Der Frau geht.", "expected_type": "incorrect", "expected_correction": "Die Frau geht.", "topic": "nominativ", "level": "A1"},
+  {"id": 222, "input": "Das Kind spielt.", "expected_type": "correct", "expected_correction": null, "topic": "nominativ", "level": "A1"},
+  {"id": 223, "input": "Die Kind spielt.", "expected_type": "incorrect", "expected_correction": "Das Kind spielt.", "topic": "nominativ", "level": "A1"},
+
+  {"id": 224, "input": "Ich bin während des Tages müde.", "expected_type": "correct", "expected_correction": null, "topic": "genitiv", "level": "A2"},
+  {"id": 225, "input": "Ich bin während dem Tages müde.", "expected_type": "incorrect", "expected_correction": "Ich bin während des Tages müde.", "topic": "genitiv", "level": "A2"},
+  {"id": 226, "input": "Ich bin wegen der Arbeit müde.", "expected_type": "correct", "expected_correction": null, "topic": "genitiv", "level": "A2"},
+  {"id": 227, "input": "Ich bin wegen die Arbeit müde.", "expected_type": "incorrect", "expected_correction": "Ich bin wegen der Arbeit müde.", "topic": "genitiv", "level": "A2"}
 ]

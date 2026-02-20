@@ -36,6 +36,8 @@ Trained to correct grammar and provide simple explanations **in Ukrainian**.
 | **Reflexive Verben**| A2 | Correct reflexive pronouns (*mich, dich, sich...*). | ✅ |
 | **Präteritum** | A2 | Past tense forms for *sein* and *haben* (*war, hatte*). | ✅ |
 | **Komparation** | A2 | Adjective comparison (*gut - besser*, not *mehr gut*). | ✅ |
+| **Nominativ** | A1 | Article as subject (*Der/Die/Das* + noun). | ✅ |
+| **Genitiv** | A2 | Genitive with prepositions (*während des*, *wegen der*, *trotz des*). | ✅ |
 
 For a complete list of examples and model explanations for each topic, see:  
 👉 **[Grammar Topics & Examples](docs/topics_examples.md)**
@@ -76,7 +78,9 @@ A2-Deutsch-Transformer/
 ├── hf_export/                      # Bundle for HF Hub (weights + code)
 ├── hf_space/                       # Bundle for HF Spaces (Gradio app)
 ├── tests/
-│   └── test_model.py               # Architecture and device tests
+│   ├── test_model.py              # Architecture and device tests
+│   ├── evaluate_model.py          # Full evaluation on 227 test examples
+│   └── test_data.json              # Hand-crafted test sentences per topic
 ├── data/                           # Generated JSONL datasets
 ├── data_raw/                       # Raw PDF textbooks
 ├── docs/                           # Architecture and grammar docs
@@ -150,6 +154,71 @@ python src/generate.py --text "Ich habe nach Berlin gefahren."
 # 5. Export to Hugging Face format
 python src/export_hf.py
 ```
+
+## Evaluation
+
+The project includes an evaluation script that runs the trained model on **227 hand-crafted test examples** and measures detection accuracy (correct vs incorrect) and correction accuracy (whether the suggested fix matches the expected one).  
+**Note:** The model is never trained on this test set; the examples are held out to measure generalization.
+
+### How to run
+
+```bash
+# Activate the environment first
+source .venv/bin/activate   # macOS/Linux
+
+# Evaluate the default model (model_final.pth)
+python tests/evaluate_model.py
+
+# Verbose: print each test case and model response
+python tests/evaluate_model.py --verbose
+
+# Use a specific checkpoint
+python tests/evaluate_model.py --model path/to/checkpoint.pth
+```
+
+### Results (example run)
+
+| Metric | Value |
+|--------|--------|
+| Test examples | 227 |
+| **Detection accuracy** | **222/227 (97.8%)** |
+| **Correction accuracy** | **209/227 (92.1%)** |
+| Correct → detected as correct | 122/127 (96.1%) |
+| Incorrect → detected as incorrect | 100/100 (100.0%) |
+
+**Per level:**  
+- A1: Detection 97.6% | Correction 95.3%  
+- A2: Detection 97.9% | Correction 90.1%
+
+**Per-topic breakdown:**
+
+| Topic | Total | Det.✅ | Det.% | Corr.✅ | Corr.% |
+|-------|-------|--------|-------|--------|--------|
+| adjective_endings | 8 | 7 | 87.5% | 5 | 62.5% |
+| akkusativ | 17 | 17 | 100.0% | 17 | 100.0% |
+| dativ | 12 | 12 | 100.0% | 12 | 100.0% |
+| fixed_prepositions | 14 | 14 | 100.0% | 14 | 100.0% |
+| genitiv | 4 | 4 | 100.0% | 2 | 50.0% |
+| haben_sein | 17 | 17 | 100.0% | 16 | 94.1% |
+| imperativ | 5 | 4 | 80.0% | 4 | 80.0% |
+| inversion | 16 | 16 | 100.0% | 15 | 93.8% |
+| komparation | 6 | 5 | 83.3% | 5 | 83.3% |
+| modal | 11 | 11 | 100.0% | 11 | 100.0% |
+| nebensatz_dass_wenn | 11 | 11 | 100.0% | 10 | 90.9% |
+| nebensatz_weil | 6 | 6 | 100.0% | 6 | 100.0% |
+| negation | 10 | 9 | 90.0% | 9 | 90.0% |
+| nominativ | 6 | 6 | 100.0% | 6 | 100.0% |
+| partizip | 7 | 7 | 100.0% | 6 | 85.7% |
+| perfekt_aux | 16 | 16 | 100.0% | 15 | 93.8% |
+| possessive | 8 | 8 | 100.0% | 8 | 100.0% |
+| praesens | 13 | 13 | 100.0% | 13 | 100.0% |
+| praeteritum | 8 | 8 | 100.0% | 7 | 87.5% |
+| questions | 8 | 8 | 100.0% | 7 | 87.5% |
+| reflexive | 5 | 5 | 100.0% | 5 | 100.0% |
+| separable | 8 | 8 | 100.0% | 7 | 87.5% |
+| wechselpraep | 11 | 10 | 90.9% | 9 | 81.8% |
+
+Detailed results are written to `tests/eval_results.json`. At the end of each run, the script prints **Failed Detection** cases: sentences where the model’s correct/incorrect decision did not match the expected one.
 
 ## Hugging Face Hub
 

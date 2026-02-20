@@ -40,8 +40,10 @@ class MasterGenerator:
         dataset.extend(self.s_gen.generate_nebensatz_dass_wenn(1000))
         dataset.extend(self.s_gen.generate_negation(1000))
         
-        # Case topics
+        # Case topics (all four cases: Nominativ, Genitiv, Dativ, Akkusativ)
+        dataset.extend(self.c_gen.generate_nominativ(1000))
         dataset.extend(self.c_gen.generate_akkusativ_masculine(1000))
+        dataset.extend(self.c_gen.generate_genitiv(500))
         dataset.extend(self.c_gen.generate_dativ(1000))
         dataset.extend(self.c_gen.generate_prepositions_akk_dat(1000))
         dataset.extend(self.c_gen.generate_adjective_endings(1000))
