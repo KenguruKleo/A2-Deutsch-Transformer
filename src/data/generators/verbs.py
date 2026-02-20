@@ -28,6 +28,60 @@ class VerbGenerator(BaseGenerator):
                 data.append({"input": f"{sub_key.capitalize()} {correct_v} {obj}.", "output": "✅ Correct."})
         return data
 
+    def generate_haben_sein_praesens(self, count=1000):
+        """A1: Irregular verbs haben/sein as main verbs in present tense."""
+        haben_forms = {"ich": "habe", "du": "hast", "er": "hat", "sie": "hat", "wir": "haben", "ihr": "habt"}
+        sein_forms = {"ich": "bin", "du": "bist", "er": "ist", "sie": "ist", "wir": "sind", "ihr": "seid"}
+        
+        haben_objects = [
+            # With indefinite article
+            ("ein Auto", "n"), ("einen Hund", "m"), ("eine Katze", "f"),
+            ("ein Buch", "n"), ("einen Bruder", "m"), ("eine Schwester", "f"),
+            # With definite article (Akkusativ)
+            ("das Auto", "n"), ("den Hund", "m"), ("die Katze", "f"),
+            ("das Buch", "n"), ("den Schlüssel", "m"), ("die Tasche", "f"),
+            # Without article
+            ("Hunger", None), ("Zeit", None), ("Durst", None), ("Geld", None)
+        ]
+        sein_complements = [
+            "müde", "krank", "zu Hause", "in Berlin", "glücklich", "traurig",
+            "Lehrer", "Student", "Arzt", "hier", "dort", "fertig", "groß"
+        ]
+        
+        data = []
+        for _ in range(count):
+            sub_key = random.choice(list(haben_forms.keys()))
+            
+            if random.random() > 0.5:
+                # haben as main verb
+                correct_v = haben_forms[sub_key]
+                obj, _ = random.choice(haben_objects)
+                
+                if random.random() > 0.4:
+                    wrong_sub = random.choice([k for k in haben_forms.keys() if k != sub_key])
+                    wrong_v = haben_forms[wrong_sub]
+                    data.append({
+                        "input": f"{sub_key.capitalize()} {wrong_v} {obj}.",
+                        "output": f"❌ Incorrect.\n✅ Correct: {sub_key.capitalize()} {correct_v} {obj}.\n📝 Пояснення: Дієслово 'haben' для підмета '{sub_key}' має форму '{correct_v}', а не '{wrong_v}'."
+                    })
+                else:
+                    data.append({"input": f"{sub_key.capitalize()} {correct_v} {obj}.", "output": "✅ Correct."})
+            else:
+                # sein as main verb
+                correct_v = sein_forms[sub_key]
+                complement = random.choice(sein_complements)
+                
+                if random.random() > 0.4:
+                    wrong_sub = random.choice([k for k in sein_forms.keys() if k != sub_key])
+                    wrong_v = sein_forms[wrong_sub]
+                    data.append({
+                        "input": f"{sub_key.capitalize()} {wrong_v} {complement}.",
+                        "output": f"❌ Incorrect.\n✅ Correct: {sub_key.capitalize()} {correct_v} {complement}.\n📝 Пояснення: Дієслово 'sein' для підмета '{sub_key}' має форму '{correct_v}', а не '{wrong_v}'."
+                    })
+                else:
+                    data.append({"input": f"{sub_key.capitalize()} {correct_v} {complement}.", "output": "✅ Correct."})
+        return data
+
     def generate_perfekt_aux(self, count=1000):
         """A2: Haben vs Sein errors in Perfekt."""
         verbs_sein = [("gehen", "gegangen"), ("fahren", "gefahren"), ("kommen", "gekommen")]

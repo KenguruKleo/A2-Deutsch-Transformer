@@ -24,6 +24,7 @@ class MasterGenerator:
         
         # Verb topics
         dataset.extend(self.v_gen.generate_praesens(1500))
+        dataset.extend(self.v_gen.generate_haben_sein_praesens(1500))
         dataset.extend(self.v_gen.generate_perfekt_aux(1500))
         dataset.extend(self.v_gen.generate_partizip_forms(1000))
         dataset.extend(self.v_gen.generate_modal_verbs(1000))
