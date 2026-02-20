@@ -181,14 +181,14 @@ python tests/evaluate_model.py --model path/to/checkpoint.pth
 | Metric | Value |
 |--------|--------|
 | Test examples | 248 |
-| **Detection accuracy** | **248/248 (100.0%)** |
-| **Correction accuracy** | **242/248 (97.6%)** |
+| **Detection accuracy** | **247/248 (99.6%)** |
+| **Correction accuracy** | **246/248 (99.2%)** |
 | Correct → detected as correct | 138/138 (100.0%) |
-| Incorrect → detected as incorrect | 110/110 (100.0%) |
+| Incorrect → detected as incorrect | 109/110 (99.1%) |
 
 **Per level:**  
-- A1: Detection 99/99 (100.0%) | Correction 98/99 (99.0%)  
-- A2: Detection 149/149 (100.0%) | Correction 144/149 (96.6%)
+- A1: Detection 98/99 (99.0%) | Correction 98/99 (99.0%)  
+- A2: Detection 149/149 (100.0%) | Correction 148/149 (99.3%)
 
 **Per-topic breakdown:**
 
@@ -198,17 +198,17 @@ python tests/evaluate_model.py --model path/to/checkpoint.pth
 | akkusativ | 19 | 19 | 100.0% | 19 | 100.0% |
 | dativ | 12 | 12 | 100.0% | 12 | 100.0% |
 | fixed_prepositions | 17 | 17 | 100.0% | 17 | 100.0% |
-| genitiv | 4 | 4 | 100.0% | 2 | 50.0% |
-| haben_sein | 17 | 17 | 100.0% | 16 | 94.1% |
+| genitiv | 4 | 4 | 100.0% | 4 | 100.0% |
+| haben_sein | 17 | 17 | 100.0% | 17 | 100.0% |
 | imperativ | 5 | 5 | 100.0% | 5 | 100.0% |
-| inversion | 16 | 16 | 100.0% | 15 | 93.8% |
+| inversion | 16 | 16 | 100.0% | 16 | 100.0% |
 | komparation | 6 | 6 | 100.0% | 6 | 100.0% |
-| modal | 15 | 15 | 100.0% | 15 | 100.0% |
+| modal | 15 | 14 | 93.3% | 14 | 93.3% |
 | nebensatz_dass_wenn | 11 | 11 | 100.0% | 11 | 100.0% |
 | nebensatz_weil | 6 | 6 | 100.0% | 6 | 100.0% |
 | negation | 12 | 12 | 100.0% | 12 | 100.0% |
 | nominativ | 6 | 6 | 100.0% | 6 | 100.0% |
-| partizip | 7 | 7 | 100.0% | 6 | 85.7% |
+| partizip | 7 | 7 | 100.0% | 7 | 100.0% |
 | perfekt_aux | 20 | 20 | 100.0% | 20 | 100.0% |
 | possessive | 8 | 8 | 100.0% | 8 | 100.0% |
 | praesens | 13 | 13 | 100.0% | 13 | 100.0% |
