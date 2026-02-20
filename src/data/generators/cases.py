@@ -300,8 +300,13 @@ class CaseGenerator(BaseGenerator):
             ("Ich bin bei der Arbeit.", "Ich bin in der Arbeit.", "Для значення «на роботі» (at work) використовується прийменник 'bei', а не 'in'. Правильно: bei der Arbeit."),
             ("Er ist auf der Arbeit.", "Er ist in der Arbeit.", "Для «на роботі» можна сказати 'auf der Arbeit' або 'bei der Arbeit'; 'in der Arbeit' тут не вживається."),
         ]
+        # Correct-only to reduce false positives (model marking "Ich gehe mit dem Freund" as wrong)
+        correct_only = ["Ich gehe mit dem Freund.", "Ich gehe mit der Frau.", "Er geht mit dem Freund."]
         data = []
         for _ in range(count):
+            if random.random() < 0.08:
+                data.append({"input": random.choice(correct_only), "output": "✅ Correct."})
+                continue
             if random.random() < 0.12:
                 correct, wrong, expl = random.choice(fixed_phrases)
                 if random.random() > 0.5:

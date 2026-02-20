@@ -71,11 +71,13 @@ class SyntaxGenerator(BaseGenerator):
         return data
 
     def generate_questions(self, count=1000):
-        """A1: W-Questions word order."""
+        """A1: W-Questions word order. Includes Wo wohnt er?, Was macht er? etc."""
         questions = [
-            ("Wo", "wohn", "du", ""), 
-            ("Was", "mach", "er", "heute"), 
-            ("Wann", "komm", "wir", "")
+            ("Wo", "wohn", "du", ""),
+            ("Wo", "wohn", "er", ""),
+            ("Was", "mach", "er", "heute"),
+            ("Wann", "komm", "wir", ""),
+            ("Wann", "komm", "du", ""),
         ]
         data = []
         for _ in range(count):

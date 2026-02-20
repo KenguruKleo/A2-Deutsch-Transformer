@@ -43,6 +43,11 @@ def build_vocab() -> dict[str, int]:
     special = ["<PAD>", "<BOS>", "<EOS>", "<UNK>"]
     tokens.extend(special)
 
+    # ─── 1b. Токени з train/val (пріоритет — щоб не обрізати при trim до TARGET_V)
+    # Усі слова з даних мають потрапити в словник, інакше модель виводить <UNK>.
+    data_words = _extract_tokens_from_data()
+    tokens.extend(data_words)
+
     # ─── 2. Пунктуація та маркери (25) ────────────────────
     punctuation = [
         ".", ",", "!", "?", ":", ";", "-", "(", ")", '"', "'",
@@ -1103,11 +1108,7 @@ def build_vocab() -> dict[str, int]:
     pdf_words = _extract_pdf_words()
     tokens.extend(pdf_words)
 
-    # ─── 28. Екстракція слів із згенерованих даних ────────
-    # АВТОМАТИЗАЦІЯ: Читаємо файли навчання/валідації і додаємо всі слова, що там є.
-    # Це гарантує, що жодне слово з генератора не потрапить у <UNK>.
-    data_words = _extract_tokens_from_data()
-    tokens.extend(data_words)
+    # (Токени з даних вже додано на початку — 1b — щоб не обрізати при trim.)
 
     # ─── Дедуплікація та побудова словника ────────────────
     seen: set[str] = set()

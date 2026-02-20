@@ -1,17 +1,12 @@
-# Push exported model to Hugging Face Hub.
-# Requires repository secret: HF_TOKEN (with write access to the repo).
-# Expects model_final.pth and config.yaml in the repo (commit them or ensure they exist on the branch).
+# Push committed hf_export/ to Hugging Face Hub.
+# Export is done locally by pre-commit (scripts/export_hf_precommit.sh).
+# Requires repository secret: HF_TOKEN or HG_TOKEN (write token).
 name: Push model to Hugging Face
 
 on:
   push:
     branches: [main]
     paths:
-      - 'model_final.pth'
-      - 'config.yaml'
-      - 'src/export_hf.py'
-      - 'src/model/**'
-      - 'src/tokenizer/**'
       - 'hf_export/**'
       - '.github/workflows/**'
       - 'scripts/**'
@@ -23,31 +18,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check for model
-        id: model
-        run: echo "exists=$([ -f model_final.pth ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - name: Check for hf_export
+        id: check
+        run: echo "exists=$([ -d hf_export ] && [ -n \"$(ls -A hf_export 2>/dev/null)\" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
-      - name: Skip (no model)
-        if: steps.model.outputs.exists != 'true'
-        run: echo "::notice::model_final.pth not in repo — export and push skipped. Commit the model to push to HF."
+      - name: Skip (no hf_export)
+        if: steps.check.outputs.exists != 'true'
+        run: echo "::notice::hf_export/ missing or empty — push skipped. Run pre-commit locally (or python src/export_hf.py) and commit."
 
       - name: Set up Python
-        if: steps.model.outputs.exists == 'true'
+        if: steps.check.outputs.exists == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
-        if: steps.model.outputs.exists == 'true'
-        run: |
-          pip install torch pyyaml safetensors huggingface_hub
-
-      - name: Export to HF bundle
-        if: steps.model.outputs.exists == 'true'
-        run: python src/export_hf.py
-
       - name: Push to Hugging Face Hub
-        if: steps.model.outputs.exists == 'true'
+        if: steps.check.outputs.exists == 'true'
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HG_TOKEN: ${{ secrets.HG_TOKEN }}

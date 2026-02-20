@@ -5,19 +5,20 @@ class VerbGenerator(BaseGenerator):
     """Generates examples for Verb topics: Conjugation, Perfekt, Präteritum, Modal Verbs."""
     
     def generate_praesens(self, count=1000):
-        """A1: Standard present tense conjugation errors."""
+        """A1: Standard present tense conjugation. Includes Sie (formal) + plural verb (Sie trinken Kaffee)."""
         verbs = [
-            ("spiel", "Fußball"), ("lern", "Deutsch"), 
-            ("koch", "Suppe"), ("trink", "Kaffee"), 
+            ("spiel", "Fußball"), ("lern", "Deutsch"),
+            ("koch", "Suppe"), ("trink", "Kaffee"),
             ("kauf", "Brot"), ("ess", "Apfel")
         ]
         data = []
         for _ in range(count):
-            sub_key = random.choice(list(self.subjects.keys()))
+            # 15% correct examples with formal Sie (sie_plural) so model learns "Sie trinken" is correct
+            sub_key = "sie_plural" if random.random() < 0.15 else random.choice(list(self.subjects.keys()))
             dn = self.get_display_name(sub_key)
             verb_stem, obj = random.choice(verbs)
             correct_v = self.get_verb_form(verb_stem, sub_key)
-            
+
             if random.random() > 0.5:
                 wrong_sub = random.choice([k for k in self.subjects.keys() if k != sub_key])
                 wrong_v = self.get_verb_form(verb_stem, wrong_sub)
@@ -88,23 +89,39 @@ class VerbGenerator(BaseGenerator):
         return data
 
     def generate_perfekt_aux(self, count=1000):
-        """A2: Haben vs Sein errors in Perfekt. Includes trinken->getrunken (haben, not sein)."""
-        verbs_sein = [("gehen", "gegangen"), ("fahren", "gefahren"), ("kommen", "gekommen")]
+        """A2: Haben vs Sein in Perfekt. Includes kommen/bleiben without object (Sie ist gekommen, Ich bin geblieben)."""
+        verbs_sein = [
+            ("gehen", "gegangen"), ("fahren", "gefahren"), ("kommen", "gekommen"),
+            ("bleiben", "geblieben"),
+        ]
         verbs_haben = [
-            ("essen", "gegessen"),
-            ("machen", "gemacht"),
-            ("kaufen", "gekauft"),
+            ("essen", "gegessen"), ("machen", "gemacht"), ("kaufen", "gekauft"),
             ("trinken", "getrunken"),
         ]
+        # Verbs that often appear without object (for "Sie hat gekommen" wrong)
+        verbs_sein_no_obj = [("kommen", "gekommen"), ("bleiben", "geblieben")]
         data = []
         for _ in range(count):
             sub_key = random.choice(list(self.subjects.keys()))
             dn = self.get_display_name(sub_key)
+            # 20%: kommen/bleiben without object so we get "Sie hat gekommen" wrong, "Ich habe geblieben" wrong
+            if random.random() < 0.2:
+                verb_inf, verb_p2 = random.choice(verbs_sein_no_obj)
+                c_aux = self.subjects[sub_key]["bin"]
+                if random.random() > 0.5:
+                    w_aux = self.subjects[sub_key]["habe"]
+                    data.append({
+                        "input": f"{dn} {w_aux} {verb_p2}.",
+                        "output": f"❌ Incorrect.\n✅ Correct: {dn} {c_aux} {verb_p2}.\n📝 Пояснення: Дієслово '{verb_inf}' означає рух або зміну стану, тому потребує допоміжного 'sein', а не 'haben'."
+                    })
+                else:
+                    data.append({"input": f"{dn} {c_aux} {verb_p2}.", "output": "✅ Correct."})
+                continue
             is_movement = random.random() > 0.5
             verb_inf, verb_p2 = random.choice(verbs_sein if is_movement else verbs_haben)
             c_aux = self.subjects[sub_key]["bin" if is_movement else "habe"]
             item = random.choice(self.nouns["place" if is_movement else "food"])[0] if is_movement or verb_p2 != "getrunken" else random.choice(["Kaffee", "Bier", "Tee", "Wasser"])
-            
+
             if random.random() > 0.5:
                 w_aux = self.subjects[sub_key]["habe" if is_movement else "bin"]
                 expl = f"Дієслово '{verb_inf}' {'означає рух' if is_movement else 'потребує допоміжного haben'}, тому використовуємо '{c_aux}', а не '{w_aux}'."
@@ -206,6 +223,9 @@ class VerbGenerator(BaseGenerator):
                     "output": f"❌ Incorrect.\n✅ Correct: {dn} {m_form} {phrase}.\n📝 Пояснення: У реченнях з модальним дієсловом ('{m_form}') основне дієслово ('{v_inf}') має стояти в самому кінці речення в інфінітиві."
                 })
             else:
+                # 25% force adverb phrases as correct to reduce false positives (Er will morgen Deutsch lernen)
+                if random.random() < 0.25:
+                    phrase, _ = random.choice([("morgen Deutsch lernen", "lernen"), ("heute nach Hause gehen", "gehen")])
                 data.append({"input": f"{dn} {m_form} {phrase}.", "output": "✅ Correct."})
         return data
 
