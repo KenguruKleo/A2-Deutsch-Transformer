@@ -19,7 +19,9 @@ class VerbGenerator(BaseGenerator):
             verb_stem, obj = random.choice(verbs)
             correct_v = self.get_verb_form(verb_stem, sub_key)
 
-            if random.random() > 0.5:
+            # Slightly more correct examples for wir/ihr/Sie so model does not over-flag "Wir spielen"
+            force_correct = (sub_key in ("wir", "ihr", "sie_plural") and random.random() < 0.2)
+            if not force_correct and random.random() > 0.5:
                 wrong_sub = random.choice([k for k in self.subjects.keys() if k != sub_key])
                 wrong_v = self.get_verb_form(verb_stem, wrong_sub)
                 data.append({
@@ -57,6 +59,39 @@ class VerbGenerator(BaseGenerator):
             sub_key = random.choice(list(haben_forms.keys()))
             dn = display_names[sub_key]
             
+            # ─── Screenshot-style errors: so model does not mark them as Correct ───
+            r = random.random()
+            if r < 0.04:
+                # Wrong: "Ich bin Auto." (sein + countable noun). Correct: "Ich habe ein Auto."
+                noun_art = [("Auto", "ein"), ("Buch", "ein"), ("Hund", "einen")]
+                noun, art = random.choice(noun_art)
+                data.append({
+                    "input": f"Ich bin {noun}.",
+                    "output": f"❌ Incorrect.\n✅ Correct: Ich habe {art} {noun}.\n📝 Пояснення: Для володіння (маю авто/книгу) використовується дієслово 'haben', а не 'sein'. Правильно: Ich habe {art} {noun}."
+                })
+                continue
+            if r < 0.08:
+                # Wrong: "Ich Auto haben." (wrong order + infinitive). Correct: "Ich habe ein Auto."
+                wrong_nouns = [("Auto", "ein"), ("Buch", "ein"), ("Hunger", None), ("Zeit", None)]
+                noun, art = random.choice(wrong_nouns)
+                correct_v = haben_forms[sub_key]
+                obj = f"{art} {noun}" if art else noun
+                wrong_input = f"{dn} {noun} haben."
+                data.append({
+                    "input": wrong_input,
+                    "output": f"❌ Incorrect.\n✅ Correct: {dn} {correct_v} {obj}.\n📝 Пояснення: Дієслово 'haben' має стояти на другому місці (після підмета) і бути в правильній формі ('{correct_v}'), а не в інфінітиві 'haben' в кінці."
+                })
+                continue
+            if r < 0.11:
+                # Wrong: "Ich bin zu Hause bin." (redundant verb). Correct: "Ich bin zu Hause."
+                complements = ["zu Hause", "müde", "krank", "in Berlin", "zum Auto", "hier"]
+                comp = random.choice(complements)
+                data.append({
+                    "input": f"Ich bin {comp} bin.",
+                    "output": f"❌ Incorrect.\n✅ Correct: Ich bin {comp}.\n📝 Пояснення: Дієслово 'bin' не потрібно повторювати. Достатньо одного разу: Ich bin {comp}."
+                })
+                continue
+            # ─── Usual haben/sein conjugation ───
             if random.random() > 0.5:
                 # haben as main verb
                 correct_v = haben_forms[sub_key]
@@ -96,7 +131,7 @@ class VerbGenerator(BaseGenerator):
         ]
         verbs_haben = [
             ("essen", "gegessen"), ("machen", "gemacht"), ("kaufen", "gekauft"),
-            ("trinken", "getrunken"),
+            ("trinken", "getrunken"), ("kochen", "gekocht"),
         ]
         # Verbs that often appear without object (for "Sie hat gekommen" wrong)
         verbs_sein_no_obj = [("kommen", "gekommen"), ("bleiben", "geblieben")]

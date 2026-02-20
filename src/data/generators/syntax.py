@@ -94,6 +94,10 @@ class SyntaxGenerator(BaseGenerator):
                 })
             else:
                 data.append({"input": correct, "output": "✅ Correct."})
+        # Fixed correct W-questions (irregular/fixed phrase) so model learns "Wie heißt du?" etc. as correct
+        for q in ["Wie heißt du?", "Wie geht es dir?"]:
+            for _ in range(max(1, count // 50)):
+                data.append({"input": q, "output": "✅ Correct."})
         return data
 
     def generate_nebensatz_dass_wenn(self, count=1000):
