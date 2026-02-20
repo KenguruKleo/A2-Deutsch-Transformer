@@ -6,22 +6,42 @@ class SyntaxGenerator(BaseGenerator):
 
     def generate_inversion(self, count=1000):
         """A2: Word order after adverbs."""
-        verbs = [("spiel", "Fußball"), ("lern", "Deutsch"), ("koch", "Suppe")]
+        regular_verbs = [("spiel", "Fußball"), ("lern", "Deutsch"), ("koch", "Suppe")]
+        # Irregular verbs: sein and haben with their own forms
+        irregular_verbs = {
+            "sein": {"ich": "bin", "du": "bist", "er": "ist", "sie": "ist", "wir": "sind", "ihr": "seid", "sie_plural": "sind"},
+            "haben": {"ich": "habe", "du": "hast", "er": "hat", "sie": "hat", "wir": "haben", "ihr": "habt", "sie_plural": "haben"}
+        }
+        sein_complements = ["zu Hause", "müde", "krank", "in Berlin", "hier"]
+        haben_complements = ["Hunger", "Zeit", "Durst", "viel Arbeit"]
+        
         data = []
         for _ in range(count):
             sub_key = random.choice(list(self.subjects.keys()))
+            dn = self.get_display_name(sub_key)
             adv = random.choice(self.time_adv)
-            v_stem, obj = random.choice(verbs)
-            v_form = self.get_verb_form(v_stem, sub_key)
             
-            correct = f"{adv} {v_form} {sub_key} {obj}."
-            wrong = f"{adv} {sub_key} {v_form} {obj}."
+            if random.random() > 0.5:
+                # Use irregular verb (sein/haben)
+                if random.random() > 0.5:
+                    v_form = irregular_verbs["sein"][sub_key]
+                    obj = random.choice(sein_complements)
+                else:
+                    v_form = irregular_verbs["haben"][sub_key]
+                    obj = random.choice(haben_complements)
+            else:
+                # Use regular verb
+                v_stem, obj = random.choice(regular_verbs)
+                v_form = self.get_verb_form(v_stem, sub_key)
+            
+            correct = f"{adv} {v_form} {dn.lower()} {obj}."
+            wrong = f"{adv} {dn.lower()} {v_form} {obj}."
             
             # Mix positive and negative
-            if random.random() > 0.4:
+            if random.random() > 0.5:
                 data.append({
                     "input": wrong,
-                    "output": f"❌ Incorrect.\n✅ Correct: {correct}\n📝 Пояснення: Коли речення починається з '{adv}', дієслово '{v_form}' має стояти на другому місці, перед підметом '{sub_key}'."
+                    "output": f"❌ Incorrect.\n✅ Correct: {correct}\n📝 Пояснення: Коли речення починається з '{adv}', дієслово '{v_form}' має стояти на другому місці, перед підметом '{dn.lower()}'."
                 })
             else:
                 data.append({"input": correct, "output": "✅ Correct."})
@@ -41,7 +61,7 @@ class SyntaxGenerator(BaseGenerator):
             correct = f"Ich esse, weil {sub_key} {obj} {aux}."
             wrong = f"Ich esse, weil {sub_key} {aux} {obj}."
             
-            if random.random() > 0.4:
+            if random.random() > 0.5:
                 data.append({
                     "input": wrong,
                     "output": f"❌ Incorrect.\n✅ Correct: {correct}\n📝 Пояснення: У підрядному реченні зі сполучником 'weil' дієслово '{aux}' має стояти в самому кінці речення."
@@ -65,7 +85,7 @@ class SyntaxGenerator(BaseGenerator):
             correct = f"{w_word} {v_form} {sub_key}{' ' + extra if extra else ''}?"
             wrong = f"{w_word} {sub_key} {v_form}{' ' + extra if extra else ''}?"
             
-            if random.random() > 0.4:
+            if random.random() > 0.5:
                 data.append({
                     "input": wrong,
                     "output": f"❌ Incorrect.\n✅ Correct: {correct}\n📝 Пояснення: У запитаннях після питального слова '{w_word}' дієслово '{v_form}' має стояти на другому місці, перед підметом '{sub_key}'."
@@ -87,7 +107,7 @@ class SyntaxGenerator(BaseGenerator):
             sub, verb, obj, main = random.choice(scenarios)
             conj = random.choice(conjunctions)
             
-            if random.random() > 0.4:
+            if random.random() > 0.5:
                 # Error: Verb not in the end
                 data.append({
                     "input": f"{main} {conj} {sub} {verb} {obj}.",
@@ -109,7 +129,7 @@ class SyntaxGenerator(BaseGenerator):
                 # Noun negation (should be kein)
                 noun, gender = random.choice(nouns)
                 c_neg = "kein" if gender != "f" else "keine"
-                if random.random() > 0.4:
+                if random.random() > 0.5:
                     data.append({
                         "input": f"Ich habe nicht {noun}.",
                         "output": f"❌ Incorrect.\n✅ Correct: Ich habe {c_neg} {noun}.\n📝 Пояснення: Для заперечення іменників (без означеного артикля) використовується '{c_neg}', а не 'nicht'."
@@ -119,7 +139,7 @@ class SyntaxGenerator(BaseGenerator):
             else:
                 # Adjective negation (should be nicht)
                 adj, prefix = random.choice(adjectives)
-                if random.random() > 0.4:
+                if random.random() > 0.5:
                     data.append({
                         "input": f"{prefix} kein {adj}.",
                         "output": f"❌ Incorrect.\n✅ Correct: {prefix} nicht {adj}.\n📝 Пояснення: Для заперечення прикметників або обставин використовується 'nicht', а не 'kein'."
