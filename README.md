@@ -3,6 +3,9 @@
 A compact Transformer model for checking and explaining errors in German sentences at the A2 level. 
 Trained to correct grammar and provide simple explanations **in Ukrainian**.
 
+🤗 **Model on Hugging Face:** [kengurukleo/deutsch_a2_transformer](https://huggingface.co/kengurukleo/deutsch_a2_transformer)  
+✨ **Live Demo (Space):** [kengurukleo/deutsch-a2-tutor](https://huggingface.co/spaces/kengurukleo/deutsch-a2-tutor)
+
 ## Features
 
 | Function | Example |
@@ -142,22 +145,38 @@ python src/generate.py --text "Ich habe nach Berlin gefahren."
 python src/export_hf.py
 ```
 
-## Hugging Face Integration
+## Hugging Face Hub
 
-To make this model compatible with modern standards and ready for the **Hugging Face Hub**, we provide an export script that converts the native PyTorch checkpoint into the **Safetensors** format.
+This model is hosted on the [Hugging Face Hub](https://huggingface.co/kengurukleo/deutsch_a2_transformer). Below are instructions for users and developers.
 
-### Exporting
-Run the following command:
-```bash
-python src/export_hf.py
+### 📥 For Users (Loading the Model)
+You can load and use this model directly in your Python code using the `transformers` library. Note that `trust_remote_code=True` is required because the model uses a custom architecture and tokenizer.
+
+```python
+from transformers import AutoModelForCausalLM
+
+# Load model and use custom code from the Hub
+model = AutoModelForCausalLM.from_pretrained(
+    "kengurukleo/deutsch_a2_transformer", 
+    trust_remote_code=True
+)
 ```
-This will create a `hf_export/` directory containing:
-- `model.safetensors`: Model weights in a secure, fast format.
-- `config.json`: Model architecture metadata.
-- `vocab.json`: Tokenizer vocabulary.
 
-### Sharing
-You can create a new model repository on [Hugging Face](https://huggingface.co/new) and upload the contents of the `hf_export/` folder. This ensures your model is "Safe-by-default" and easy to share.
+### 🛠 For Developers (Export and Publish)
+If you want to re-export the model or publish your own version:
+
+1. **Export to Safetensors**:
+   Run the export script to create a compatible bundle (weights, config, and source code):
+   ```bash
+   python src/export_hf.py
+   ```
+   This creates a `hf_export/` directory with `model.safetensors`, `config.json`, and the necessary `.py` files.
+
+2. **Publish to Hub**:
+   Use the Hugging Face CLI to upload the export bundle:
+   ```bash
+   huggingface-cli upload kengurukleo/deutsch_a2_transformer ./hf_export .
+   ```
 
 ## Data Format (JSONL)
 
