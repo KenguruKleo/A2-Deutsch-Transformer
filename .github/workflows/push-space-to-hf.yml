@@ -1,0 +1,51 @@
+# Deploy hf_space/ to Hugging Face Space (Gradio app).
+# Requires repository secret: HF_TOKEN or HG_TOKEN (write token).
+name: Push Space to Hugging Face
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'hf_space/**'
+      - '.github/workflows/push-space-to-hf.yml'
+  workflow_dispatch:
+
+jobs:
+  push-space:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for hf_space
+        id: check
+        run: |
+          if [ -d hf_space ] && [ -n "$(ls -A hf_space 2>/dev/null | head -1)" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip (no hf_space)
+        if: steps.check.outputs.exists != 'true'
+        run: echo "::notice::hf_space/ missing or empty — push skipped."
+
+      - name: Set up Python
+        if: steps.check.outputs.exists == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Push Space to Hugging Face
+        if: steps.check.outputs.exists == 'true'
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HG_TOKEN: ${{ secrets.HG_TOKEN }}
+        run: |
+          TOKEN="${HF_TOKEN:-$HG_TOKEN}"
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Add HF_TOKEN or HG_TOKEN in Settings → Secrets and Actions (write token from https://huggingface.co/settings/tokens)"
+            exit 1
+          fi
+          export TOKEN
+          pip install huggingface_hub -q
+          python scripts/upload_space_to_hf.py

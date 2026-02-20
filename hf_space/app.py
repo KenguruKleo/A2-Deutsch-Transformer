@@ -48,12 +48,31 @@ with gr.Blocks() as demo:
     gr.Examples(
         examples=[
             ["Ich habe nach Berlin gefahren."],
-            ["Heute gehe я ins Kino."],
+            ["Heute gehe Ich ins Kino."],
             ["Ich kann sprechen Deutsch."],
             ["Wo du wohnst?"],
-            ["Ich habe не Auto."]
+            ["Ich habe kein Auto."],
+            ["Ich bin nach Hause gegangen."],
+            ["Ich war zu Hause."],
+            ["Ich habe gegangen."],
+            ["Er ist Lehrer."],
+            ["Er sind Lehrer."],
+            ["In das Kino."],
+            ["Das ist mein Bruder."],
+            ["Das ist meine Bruder."],
+            ["Ich freue mich."],
+            ["Heute gehe ich ins Kino."],
+            ["Ich freue dich."],
+            ["Ich bin einen Apfel gegessen."],
+            ["Mit den Bus."],
+            ["Ich war zu Hause gestern."],
+            ["In dem Kino gehen wir."],
+            ["Ich aufstehe um 7 Uhr."],
+            ["Weil er ist krank."],
+            ["Das ist mehr gut."],
+            ["Ich habe der Tisch."],
         ],
-        inputs=input_text
+        inputs=input_text,
     )
 
     check_btn.click(fn=check_grammar, inputs=input_text, outputs=output_text)
