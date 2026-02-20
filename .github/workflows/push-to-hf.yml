@@ -48,15 +48,4 @@ jobs:
           fi
           export TOKEN
           pip install huggingface_hub -q
-          python -c "
-import os
-from huggingface_hub import HfApi
-api = HfApi()
-api.upload_folder(
-    folder_path='hf_export',
-    repo_id='kengurukleo/deutsch_a2_transformer',
-    repo_type='model',
-    token=os.environ.get('TOKEN', '').strip() or None,
-)
-print('Uploaded hf_export/ to kengurukleo/deutsch_a2_transformer')
-"
+          python scripts/upload_to_hf.py
