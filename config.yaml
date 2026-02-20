@@ -14,7 +14,7 @@ training:
   learning_rate: 3e-4
   epochs: 20
   warmup_steps: 500
-  device: "mps" # "mps" for Mac M1/M2, "cuda" for NVIDIA, "cpu" for others
+  device: "auto" # "auto" = best of cuda/xpu/mps/cpu, or set "cuda"|"xpu"|"mps"|"cpu"
 
 data:
   train_path: "data/train.jsonl"

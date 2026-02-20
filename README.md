@@ -72,7 +72,7 @@ A2-Deutsch-Transformer/
 │   ├── data/
 │   │   ├── generator.py            # Main synthetic data generator
 │   │   └── generators/             # Specialized topic generators
-│   ├── train.py                    # Training loop (MPS optimized)
+│   ├── train.py                    # Training loop (device auto-detection)
 │   ├── generate.py                 # CLI inference script
 │   └── export_hf.py                # Hugging Face export script
 ├── hf_export/                      # Bundle for HF Hub (weights + code)
@@ -98,7 +98,7 @@ Creates the "brain" of the tokenizer. It analyzes the `Begegnungen_A2.pdf` textb
 Generates thousands of training examples. It knows grammar rules, takes a correct sentence and intentionally "breaks" it (e.g., changes word order or auxiliary verb), adding an explanation of why it is an error.
 
 ### 3. Training
-The model is trained locally on **Apple Silicon (M1/M2/M3)** using `torch.device("mps")`. Due to its small size (2.5 MB), training takes only a few minutes.
+The model is trained locally with **automatic device selection**: the best available backend is chosen from **CUDA** (NVIDIA/AMD), **XPU** (Intel), **MPS** (Apple Silicon), or **CPU** (see `config.yaml` → `training.device: "auto"`). Due to its small size (2.5 MB), training takes only a few minutes.
 
 ## Installation & Setup
 
@@ -132,7 +132,7 @@ python tests/test_model.py
 
 These tests check:
 - Output dimensions (`[batch, seq_len, vocab_size]`).
-- Successful execution on **MPS** (Apple Silicon) or **CPU**.
+- Successful execution on the best available device (**CUDA**, **XPU**, **MPS**, or **CPU**).
 
 ## Quick Start
 

@@ -4,15 +4,13 @@ import yaml
 import argparse
 from src.model.model import TransformerModel
 from src.tokenizer.tokenizer import Tokenizer
-from src.config import load_config
+from src.config import load_config, get_device
 
 def generate(text, model_path="model_final.pth", config_path="config.yaml"):
     # 1. Load Config
     config = load_config(config_path)
 
-    device = config.training.device
-    if device == "mps" and not torch.backends.mps.is_available():
-        device = "cpu"
+    device = get_device(getattr(config.training, "device", None))
     
     # 2. Load Tokenizer & Model
     tokenizer = Tokenizer("src/tokenizer/vocab.json")

@@ -7,7 +7,7 @@ from pathlib import Path
 from tqdm import tqdm
 from src.model.model import TransformerModel
 from src.tokenizer.tokenizer import Tokenizer
-from src.config import load_config
+from src.config import load_config, get_device
 
 class GrammarDataset(Dataset):
     """Dataset for training the geometry model on grammar corrections."""
@@ -40,10 +40,8 @@ def train():
     # 1. Load Config
     config = load_config()
 
-    # 2. Set Device
-    device = config.training.device
-    if device == "mps" and not torch.backends.mps.is_available():
-        device = "cpu"
+    # 2. Set Device (auto: cuda → mps → cpu)
+    device = get_device(getattr(config.training, "device", None))
     print(f"🚀 Training on device: {device}")
 
     # 3. Init Tokenizer & Model

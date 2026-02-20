@@ -26,7 +26,7 @@ sys.path.append(str(project_root))
 
 from src.model.model import TransformerModel
 from src.tokenizer.tokenizer import Tokenizer
-from src.config import load_config
+from src.config import load_config, get_device
 
 
 def generate_response(text, model, tokenizer, config, device):
@@ -98,10 +98,8 @@ def evaluate(model_path="model_final.pth", verbose=False):
     # Load config
     config = load_config(str(project_root / "config.yaml"))
     
-    device = config.training.device
-    if device == "mps" and not torch.backends.mps.is_available():
-        device = "cpu"
-    
+    device = get_device(getattr(config.training, "device", None))
+
     # Load model
     tokenizer = Tokenizer(str(project_root / "src/tokenizer/vocab.json"))
     checkpoint = torch.load(str(project_root / model_path), map_location=device)
