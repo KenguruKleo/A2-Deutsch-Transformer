@@ -48,23 +48,45 @@ class SyntaxGenerator(BaseGenerator):
         return data
 
     def generate_nebensatz_weil(self, count=1000):
-        """A2: Subordinate clause word order (Verb at the end)."""
-        reasons = [
-            ("ich", "habe", "Hunger"), 
-            ("es", "ist", "kalt"), 
-            ("du", "hast", "Zeit")
+        """A2: Subordinate clause word order (Verb at the end). Includes modal+infinitive: 'weil ich Deutsch sprechen will'."""
+        # Main clause starters (variety so model sees "Ich lerne, weil..." not only "Ich esse, weil...")
+        main_clauses = ["Ich esse", "Ich lerne", "Ich bleibe", "Ich bin müde", "Ich komme", "Ich trinke"]
+        # Simple: (subject, verb, object) -> weil subj obj verb
+        reasons_simple = [
+            ("ich", "habe", "Hunger"),
+            ("es", "ist", "kalt"),
+            ("du", "hast", "Zeit"),
+            ("er", "hat", "Durst"),
+            ("sie", "ist", "krank"),
         ]
-        
+        # Modal + infinitive: (subject, modal, infinitive_phrase) -> weil subj inf phrase modal
+        reasons_modal = [
+            ("ich", "will", "Deutsch sprechen"),
+            ("ich", "muss", "nach Hause gehen"),
+            ("ich", "kann", "gut kochen"),
+            ("du", "willst", "Kaffee trinken"),
+            ("er", "muss", "arbeiten"),
+            ("sie", "will", "Deutsch lernen"),
+        ]
         data = []
         for _ in range(count):
-            sub_key, aux, obj = random.choice(reasons)
-            correct = f"Ich esse, weil {sub_key} {obj} {aux}."
-            wrong = f"Ich esse, weil {sub_key} {aux} {obj}."
-            
+            main = random.choice(main_clauses)
+            if random.random() < 0.4:
+                # Modal + infinitive in weil-clause (so "Ich lerne, weil ich Deutsch sprechen will." appears)
+                sub_key, modal, inf_phrase = random.choice(reasons_modal)
+                correct = f"{main}, weil {sub_key} {inf_phrase} {modal}."
+                wrong = f"{main}, weil {sub_key} {modal} {inf_phrase}."
+                verb_at_end = modal
+            else:
+                # Simple weil-clause
+                sub_key, aux, obj = random.choice(reasons_simple)
+                correct = f"{main}, weil {sub_key} {obj} {aux}."
+                wrong = f"{main}, weil {sub_key} {aux} {obj}."
+                verb_at_end = aux
             if random.random() > 0.5:
                 data.append({
                     "input": wrong,
-                    "output": f"❌ Incorrect.\n✅ Correct: {correct}\n📝 Пояснення: У підрядному реченні зі сполучником 'weil' дієслово '{aux}' має стояти в самому кінці речення."
+                    "output": f"❌ Incorrect.\n✅ Correct: {correct}\n📝 Пояснення: У підрядному реченні зі сполучником 'weil' дієслово '{verb_at_end}' має стояти в самому кінці речення."
                 })
             else:
                 data.append({"input": correct, "output": "✅ Correct."})

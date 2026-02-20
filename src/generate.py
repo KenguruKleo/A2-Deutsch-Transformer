@@ -48,6 +48,7 @@ def generate(text, model_path="model_final.pth", config_path="config.yaml"):
             logits = model(idx_cond) # [batch=1, seq_len, vocab_size]
         
         # Take logits for the last token only
+        # logits size after this operation: [batch=1, 1, vocab_size]
         logits = logits[:, -1, :] / temperature
         
         # Optional: Top-k filtering

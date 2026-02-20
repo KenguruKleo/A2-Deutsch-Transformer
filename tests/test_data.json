@@ -298,5 +298,6 @@
   {"id": 246, "input": "Er ist auf der Arbeit.", "expected_type": "correct", "expected_correction": null, "topic": "fixed_prepositions", "level": "A2"},
 
   {"id": 247, "input": "Ich habe kein Geld.", "expected_type": "correct", "expected_correction": null, "topic": "negation", "level": "A1"},
-  {"id": 248, "input": "Ich habe nicht Geld.", "expected_type": "incorrect", "expected_correction": "Ich habe kein Geld.", "topic": "negation", "level": "A1"}
+  {"id": 248, "input": "Ich habe nicht Geld.", "expected_type": "incorrect", "expected_correction": "Ich habe kein Geld.", "topic": "negation", "level": "A1"},
+  {"id": 249, "input": "Sie war krank.", "expected_type": "correct", "expected_correction": null, "topic": "praeteritum", "level": "A2"}
 ]

@@ -68,8 +68,16 @@ if __name__ == "__main__":
     config = load_config()
     master = MasterGenerator()
     data = master.generate_all()
-    
+
     # Split into training and validation (90/10)
     split = int(len(data) * 0.9)
     master.save(data[:split], config.data.train_path)
     master.save(data[split:], config.data.val_path)
+
+    # Rebuild vocab from new train/val so all generated words are in the dictionary
+    from src.tokenizer.build_vocab import build_vocab
+    vocab = build_vocab()
+    vocab_path = Path(__file__).resolve().parent.parent / "tokenizer" / "vocab.json"
+    with open(vocab_path, "w", encoding="utf-8") as f:
+        json.dump(vocab, f, ensure_ascii=False, indent=2)
+    print(f"✅ vocab.json rebuilt — {len(vocab)} tokens")

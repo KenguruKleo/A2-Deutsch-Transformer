@@ -67,69 +67,68 @@ def train():
     optimizer = torch.optim.AdamW(model.parameters(), lr=float(config.training.learning_rate))
     criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_id)
 
-    # 6. Training Loop
+    # 6. Training Loop with early stopping
     epochs = config.training.epochs
-    
-    print(f"📊 Starting training for {epochs} epochs...")
-    
+    patience = getattr(config.training, "early_stopping_patience", 0) or 0
+    best_val_loss = float("inf")
+    best_state_dict = None
+    epochs_without_improvement = 0
+
+    print(f"📊 Starting training for up to {epochs} epochs" + (f" (early stop if no val improvement for {patience} epochs)" if patience else "") + "...")
+
     for epoch in range(epochs):
         model.train()
         total_loss = 0
         pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs}")
         
         for batch in pbar:
-            # batch: [batch_size, seq_len]
             batch = batch.to(device)
-            
-            # For Causal LM: inputs are [0...T-1], targets are [1...T]
-            inputs = batch[:, :-1]  # shape: [batch_size, seq_len - 1]
-            targets = batch[:, 1:]   # shape: [batch_size, seq_len - 1]
-            
-            # Forward pass
-            logits = model(inputs) # shape: [batch_size, seq_len - 1, vocab_size]
-            
-            # Flatten for loss calculation:
-            # Logits: [batch_size * (seq_len - 1), vocab_size]
-            # Targets: [batch_size * (seq_len - 1)]
+            inputs = batch[:, :-1]
+            targets = batch[:, 1:]
+            logits = model(inputs)
             loss = criterion(logits.reshape(-1, logits.size(-1)), targets.reshape(-1))
-            
-            # Backward pass
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            
             total_loss += loss.item()
             pbar.set_postfix({"loss": f"{loss.item():.4f}"})
 
         avg_loss = total_loss / len(train_loader)
-        
-        # Validation
+
         model.eval()
         val_loss = 0
         with torch.no_grad():
             for batch in validation_loader:
-                # batch: [batch_size, seq_len]
                 batch = batch.to(device)
-
-                inputs = batch[:, :-1] # shape: [batch_size, seq_len - 1]
-                targets = batch[:, 1:]  # shape: [batch_size, seq_len - 1]
-
-                logits = model(inputs) # shape: [batch_size, seq_len - 1, vocab_size]
-
-                # Flatten for loss calculation
+                inputs = batch[:, :-1]
+                targets = batch[:, 1:]
+                logits = model(inputs)
                 loss = criterion(logits.reshape(-1, logits.size(-1)), targets.reshape(-1))
                 val_loss += loss.item()
-        
+
         avg_val_loss = val_loss / len(validation_loader)
         print(f"✨ Epoch {epoch+1} finished. Train Loss: {avg_loss:.4f}, Val Loss: {avg_val_loss:.4f}")
 
-    # 7. Save Model
+        if avg_val_loss < best_val_loss:
+            best_val_loss = avg_val_loss
+            best_state_dict = {k: v.cpu().clone() for k, v in model.state_dict().items()}
+            epochs_without_improvement = 0
+        else:
+            epochs_without_improvement += 1
+
+        if patience and epochs_without_improvement >= patience:
+            print(f"⏹ Early stopping: no val improvement for {patience} epochs (best Val Loss: {best_val_loss:.4f})")
+            break
+
+    # 7. Save best model
+    if best_state_dict is not None:
+        model.load_state_dict(best_state_dict)
     save_path = Path("model_final.pth")
     torch.save({
-        'model_state_dict': model.state_dict(),
-        'vocab_size': config.model.vocab_size
+        "model_state_dict": model.state_dict(),
+        "vocab_size": config.model.vocab_size,
     }, save_path)
-    print(f"📦 Model saved to {save_path}")
+    print(f"📦 Best model saved to {save_path}")
 
 if __name__ == "__main__":
     train()

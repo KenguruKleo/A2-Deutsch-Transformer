@@ -13,6 +13,7 @@ training:
   batch_size: 64
   learning_rate: 3e-4
   epochs: 20
+  early_stopping_patience: 5  # stop if val loss has not improved for this many epochs (0 = disabled)
   warmup_steps: 500
   device: "auto" # "auto" = best of cuda/xpu/mps/cpu, or set "cuda"|"xpu"|"mps"|"cpu"
 
