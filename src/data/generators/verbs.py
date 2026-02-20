@@ -134,8 +134,13 @@ class VerbGenerator(BaseGenerator):
         return data
 
     def generate_partizip_forms(self, count=1000):
-        """A2: Wrong Partizip II form."""
-        verbs = [("essen", "gegessen", "habe"), ("gehen", "gegangen", "bin"), ("sehen", "gesehen", "habe")]
+        """A2: Wrong Partizip II form. Includes kaufen/gekauft so 'Du hast Brot gekauft' is learned."""
+        verbs = [
+            ("essen", "gegessen", "habe"),
+            ("gehen", "gegangen", "bin"),
+            ("sehen", "gesehen", "habe"),
+            ("kaufen", "gekauft", "habe"),
+        ]
         data = []
         for _ in range(count):
             sub_key = random.choice(list(self.subjects.keys()))
