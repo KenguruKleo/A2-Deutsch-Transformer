@@ -1,7 +1,7 @@
 # 🇩🇪 A2 Deutsch Grammar Tutor
 
 A compact Transformer model for checking and explaining errors in German sentences at the A2 level. 
-Trained to correct grammar and provide simple explanations.
+Trained to correct grammar and provide simple explanations **in Ukrainian**.
 
 ## Features
 
@@ -9,7 +9,7 @@ Trained to correct grammar and provide simple explanations.
 |---|---|
 | ✅ Validity Check | `Ich bin nach Hause gegangen.` → ✅ |
 | ❌ Error Correction | `Dann ich gehe...` → `Dann gehe ich...` |
-| 📝 Explanations | An adverb at the start requires subject-verb inversion. |
+| 📝 Explanations | Detailed grammar feedback provided in **Ukrainian**. |
 
 ### ✅ Covered A1-A2 Topics (100% Complete)
 

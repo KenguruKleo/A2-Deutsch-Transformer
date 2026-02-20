@@ -1,14 +1,19 @@
 {
   "architectures": [
-    "TransformerModel"
+    "DeutschA2Model"
   ],
   "vocab_size": 4000,
-  "max_position_embeddings": 64,
+  "max_seq_len": 64,
   "hidden_size": 128,
   "num_hidden_layers": 4,
   "num_attention_heads": 4,
   "intermediate_size": 512,
-  "model_type": "kengurukleo_deutsch_a2_transformer",
+  "model_type": "deutsch_a2_transformer",
   "torch_dtype": "float32",
-  "weight_tying": true
+  "weight_tying": true,
+  "auto_map": {
+    "AutoConfig": "configuration_custom.DeutschA2Config",
+    "AutoModel": "modeling_custom.DeutschA2Model",
+    "AutoModelForCausalLM": "modeling_custom.DeutschA2Model"
+  }
 }
