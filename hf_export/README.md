@@ -8,6 +8,7 @@ tags:
 - transformer
 - education
 - pytorch
+
 ---
 
 # Deutsch A2 Grammar Transformer (Ukrainian Explanations)

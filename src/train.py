@@ -58,10 +58,10 @@ def train():
 
     # 4. Prepare Data
     train_ds = GrammarDataset(config.data.train_path, tokenizer, config.model.max_seq_len)
-    val_ds = GrammarDataset(config.data.val_path, tokenizer, config.model.max_seq_len)
+    validation_ds = GrammarDataset(config.data.val_path, tokenizer, config.model.max_seq_len)
     
     train_loader = DataLoader(train_ds, batch_size=config.training.batch_size, shuffle=True)
-    validation_loader = DataLoader(val_ds, batch_size=config.training.batch_size)
+    validation_loader = DataLoader(validation_ds, batch_size=config.training.batch_size)
 
     # 5. Optimizer & Loss
     optimizer = torch.optim.AdamW(model.parameters(), lr=float(config.training.learning_rate))

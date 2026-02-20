@@ -20,7 +20,12 @@ jobs:
 
       - name: Check for hf_export
         id: check
-        run: echo "exists=$([ -d hf_export ] && [ -n \"$(ls -A hf_export 2>/dev/null)\" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+        run: |
+          if [ -d hf_export ] && [ -n "$(ls -A hf_export 2>/dev/null | head -1)" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Skip (no hf_export)
         if: steps.check.outputs.exists != 'true'
