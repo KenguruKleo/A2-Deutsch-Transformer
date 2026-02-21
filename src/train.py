@@ -63,9 +63,17 @@ def train():
     train_loader = DataLoader(train_ds, batch_size=config.training.batch_size, shuffle=True)
     validation_loader = DataLoader(validation_ds, batch_size=config.training.batch_size)
 
-    # 5. Optimizer & Loss
+    # 5. Optimizer & Loss (with boosted weight for classification-decision tokens)
     optimizer = torch.optim.AdamW(model.parameters(), lr=float(config.training.learning_rate))
-    criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_id)
+    decision_w = getattr(config.training, "decision_token_weight", 1.0) or 1.0
+    decision_token_ids: set[int] = set()
+    for tok_str in ["✅", "❌", "Correct", "Incorrect", "Correct:", "Incorrect."]:
+        tid = tokenizer.token_to_id.get(tok_str)
+        if tid is not None:
+            decision_token_ids.add(tid)
+    if decision_w > 1.0 and decision_token_ids:
+        print(f"⚖️  Decision token weight: {decision_w}x for {len(decision_token_ids)} tokens (✅❌ Correct Incorrect)")
+    criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_id, reduction="none")
 
     # 6. Training Loop with early stopping
     epochs = config.training.epochs
@@ -86,7 +94,14 @@ def train():
             inputs = batch[:, :-1]
             targets = batch[:, 1:]
             logits = model(inputs)
-            loss = criterion(logits.reshape(-1, logits.size(-1)), targets.reshape(-1))
+            per_token_loss = criterion(logits.reshape(-1, logits.size(-1)), targets.reshape(-1))
+            if decision_w > 1.0 and decision_token_ids:
+                flat_targets = targets.reshape(-1)
+                weights = torch.ones_like(per_token_loss)
+                for tid in decision_token_ids:
+                    weights[flat_targets == tid] = decision_w
+                per_token_loss = per_token_loss * weights
+            loss = per_token_loss.mean()
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -103,8 +118,8 @@ def train():
                 inputs = batch[:, :-1]
                 targets = batch[:, 1:]
                 logits = model(inputs)
-                loss = criterion(logits.reshape(-1, logits.size(-1)), targets.reshape(-1))
-                val_loss += loss.item()
+                per_token_loss = criterion(logits.reshape(-1, logits.size(-1)), targets.reshape(-1))
+                val_loss += per_token_loss.mean().item()
 
         avg_val_loss = val_loss / len(validation_loader)
         print(f"✨ Epoch {epoch+1} finished. Train Loss: {avg_loss:.4f}, Val Loss: {avg_val_loss:.4f}")

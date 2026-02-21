@@ -43,7 +43,7 @@ class MasterGenerator:
         
         # Case topics (all four cases: Nominativ, Genitiv, Dativ, Akkusativ)
         dataset.extend(self.c_gen.generate_nominativ(1000))
-        dataset.extend(self.c_gen.generate_akkusativ_masculine(1000))
+        dataset.extend(self.c_gen.generate_akkusativ_masculine(1500))
         dataset.extend(self.c_gen.generate_article_required_akkusativ(500))
         dataset.extend(self.c_gen.generate_genitiv(1200))
         dataset.extend(self.c_gen.generate_dativ(1000))

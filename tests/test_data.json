@@ -250,6 +250,7 @@
   {"id": 205, "input": "Er antwortet dem Mann.", "expected_type": "correct", "expected_correction": null, "topic": "dativ", "level": "A2"},
   {"id": 206, "input": "Ich habe die Auto.", "expected_type": "incorrect", "expected_correction": "Ich habe das Auto.", "topic": "akkusativ", "level": "A1"},
   {"id": 207, "input": "Ich habe der Auto.", "expected_type": "incorrect", "expected_correction": "Ich habe das Auto.", "topic": "akkusativ", "level": "A1"},
+  {"id": 250, "input": "Ich habe den Auto.", "expected_type": "incorrect", "expected_correction": "Ich habe das Auto.", "topic": "akkusativ", "level": "A1"},
   {"id": 208, "input": "Ich helfe die Mutter.", "expected_type": "incorrect", "expected_correction": "Ich helfe der Mutter.", "topic": "dativ", "level": "A2"},
   {"id": 209, "input": "Er dankt das Kind.", "expected_type": "incorrect", "expected_correction": "Er dankt dem Kind.", "topic": "dativ", "level": "A2"},
   {"id": 210, "input": "Ich gehe in die Küche.", "expected_type": "correct", "expected_correction": null, "topic": "wechselpraep", "level": "A2"},

@@ -294,17 +294,6 @@ class VerbGenerator(BaseGenerator):
                 if random.random() < 0.25:
                     phrase, _ = random.choice([("morgen Deutsch lernen", "lernen"), ("heute nach Hause gehen", "gehen")])
                 data.append({"input": f"{dn} {m_form} {phrase}.", "output": "✅ Correct."})
-        # Fixed wrong word order so eval "Ich muss heute gehen nach Hause" is learned
-        for wrong_input, correct in [
-            ("Ich muss heute gehen nach Hause.", "Ich muss heute nach Hause gehen."),
-            ("Du musst heute gehen nach Hause.", "Du musst heute nach Hause gehen."),
-            ("Er will morgen lernen Deutsch.", "Er will morgen Deutsch lernen."),
-        ]:
-            for _ in range(max(1, count // 80)):
-                data.append({
-                    "input": wrong_input,
-                    "output": f"❌ Incorrect.\n✅ Correct: {correct}\n📝 Пояснення: У реченнях з модальним дієсловом основне дієслово (інфінітив) має стояти в самому кінці речення."
-                })
         return data
 
     def generate_separable_verbs(self, count=1000):
@@ -389,16 +378,6 @@ class VerbGenerator(BaseGenerator):
                 })
             else:
                 data.append({"input": f"{dn} {c_form} {extra}.", "output": "✅ Correct."})
-        # Fixed correct examples so eval cases (Ich war müde, Er hatte Hunger, etc.) are always present
-        for correct_input in [
-            "Ich war müde.",
-            "Er hatte Hunger.",
-            "Du warst gestern zu Hause.",
-            "Wir waren sehr müde.",
-            "Sie war krank.",
-        ]:
-            for _ in range(max(1, count // 60)):
-                data.append({"input": correct_input, "output": "✅ Correct."})
         return data
 
     def generate_imperativ(self, count=1000):

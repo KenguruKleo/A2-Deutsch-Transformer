@@ -5,129 +5,109 @@ class CaseGenerator(BaseGenerator):
     """Generates examples for all four German cases: Nominativ, Genitiv, Dativ, Akkusativ."""
 
     def generate_nominativ(self, count=1000):
-        """A1: Nominativ — article as subject (Der/Die/Das + Noun + verb). Wrong gender or other case."""
-        # (noun, gender, nom_article, list of wrong articles), verb in 3rd sg
-        nouns = [
-            ("Mann", "m", "Der", ["Die", "Das", "Den", "Dem"]),
-            ("Vater", "m", "Der", ["Die", "Das", "Den", "Dem"]),
-            ("Hund", "m", "Der", ["Die", "Das", "Den", "Dem"]),
-            ("Frau", "f", "Die", ["Der", "Das", "Den", "Dem"]),
-            ("Mutter", "f", "Die", ["Der", "Das", "Den", "Dem"]),
-            ("Katze", "f", "Die", ["Der", "Das", "Den", "Dem"]),
-            ("Kind", "n", "Das", ["Der", "Die", "Den", "Dem"]),
-            ("Auto", "n", "Das", ["Der", "Die", "Den", "Dem"]),
-            ("Buch", "n", "Das", ["Der", "Die", "Den", "Dem"]),
-        ]
-        # 3rd person singular verb forms (er/sie/es)
+        """A1: Nominativ — article as subject — all nouns from shared pool."""
         verb_phrases = [
-            ("kommt", "kommen"),
-            ("geht", "gehen"),
-            ("spielt", "spielen"),
-            ("schläft", "schlafen"),
-            ("arbeitet", "arbeiten"),
-            ("liest", "lesen"),
+            ("kommt", "kommen"), ("geht", "gehen"), ("spielt", "spielen"),
+            ("schläft", "schlafen"), ("arbeitet", "arbeiten"), ("liest", "lesen"),
         ]
-        gender_names = {"m": "чоловічого", "n": "середнього", "f": "жіночого"}
         data = []
         for _ in range(count):
-            noun, gender, c_art, wrong_articles = random.choice(nouns)
-            v_form, v_inf = random.choice(verb_phrases)
+            noun, gender = random.choice(self.nouns_with_gender)
+            c_art = self.articles["nom"][gender].capitalize()
+            wrong_articles = [a.capitalize() for a in self.all_def_articles if a.capitalize() != c_art]
             w_art = random.choice(wrong_articles)
+            v_form, v_inf = random.choice(verb_phrases)
             if random.random() > 0.5:
                 data.append({
                     "input": f"{w_art} {noun} {v_form}.",
-                    "output": f"❌ Incorrect.\n✅ Correct: {c_art} {noun} {v_form}.\n📝 Пояснення: У Nominativ (підмет) для {gender_names[gender]} роду артикль — '{c_art}', а не '{w_art}'."
+                    "output": f"❌ Incorrect.\n✅ Correct: {c_art} {noun} {v_form}.\n📝 Пояснення: У Nominativ (підмет) для {self.gender_names[gender]} роду артикль — '{c_art}', а не '{w_art}'."
                 })
             else:
                 data.append({"input": f"{c_art} {noun} {v_form}.", "output": "✅ Correct."})
         return data
 
     def generate_akkusativ_masculine(self, count=1000):
-        """A1: Akkusativ for all genders (der->den, die->die, das->das). Wrong: Dativ or wrong gender."""
-        verbs = ["suche", "sehe", "kaufe", "brauche", "habe"]
-        # (noun, gender, akk_article, list of wrong articles: Dativ + wrong gender)
-        nouns = [
-            ("Apfel", "m", "den", ["dem", "die", "das"]),
-            ("Schlüssel", "m", "den", ["dem", "die", "das"]),
-            ("Computer", "m", "den", ["dem", "die", "das"]),
-            ("Hund", "m", "den", ["dem", "die", "das"]),
-            ("Auto", "n", "das", ["dem", "der", "die"]),
-            ("Buch", "n", "das", ["dem", "der", "die"]),
-            ("Handy", "n", "das", ["dem", "der", "die"]),
-            ("Katze", "f", "die", ["der", "den", "das"]),
-            ("Tasche", "f", "die", ["der", "den", "das"]),
-            ("Schwester", "f", "die", ["der", "den", "das"]),
-        ]
-        gender_names = {"m": "чоловічого", "n": "середнього", "f": "жіночого"}
-        data = []
-        for _ in range(count):
-            verb = random.choice(verbs)
-            noun, gender, c_art, wrong_articles = random.choice(nouns)
-            w_art = random.choice(wrong_articles)
-            if random.random() > 0.5:
-                data.append({
-                    "input": f"Ich {verb} {w_art} {noun}.",
-                    "output": f"❌ Incorrect.\n✅ Correct: Ich {verb} {c_art} {noun}.\n📝 Пояснення: Дієслово '{verb}' вимагає Akkusativ. Для {gender_names[gender]} роду артикль у Akkusativ — '{c_art}', а не '{w_art}'."
-                })
-            else:
-                data.append({"input": f"Ich {verb} {c_art} {noun}.", "output": "✅ Correct."})
-        return data
-
-    def generate_article_required_akkusativ(self, count=500):
-        """A1: After haben/brauchen etc. countable noun needs article (ein/das). Wrong: 'Ich habe Auto' without article."""
-        verbs = [("habe", "haben"), ("brauche", "brauchen"), ("kaufe", "kaufen"), ("sehe", "sehen")]
-        # (noun, gender), def_akk = den/das/die, indef_akk = einen/ein/eine
-        nouns = [
-            ("Auto", "n"), ("Buch", "n"), ("Handy", "n"),
-            ("Hund", "m"), ("Apfel", "m"), ("Computer", "m"),
-            ("Katze", "f"), ("Tasche", "f"), ("Schwester", "f"),
-        ]
-        def_art = {"m": "den", "n": "das", "f": "die"}
-        indef_art = {"m": "einen", "n": "ein", "f": "eine"}
-        data = []
-        for _ in range(count):
-            verb, v_inf = random.choice(verbs)
-            noun, gender = random.choice(nouns)
-            use_definite = random.random() > 0.5
-            art = def_art[gender] if use_definite else indef_art[gender]
-            if random.random() > 0.5:
-                # Wrong: no article
-                data.append({
-                    "input": f"Ich {verb} {noun}.",
-                    "output": f"❌ Incorrect.\n✅ Correct: Ich {verb} {art} {noun}.\n📝 Пояснення: Дієслово '{v_inf}' вимагає Akkusativ. Злічний іменник '{noun}' потребує артикля (наприклад '{art}') — не можна опускати."
-                })
-            else:
-                data.append({"input": f"Ich {verb} {art} {noun}.", "output": "✅ Correct."})
-        return data
-
-    def generate_dativ(self, count=1000):
-        """A2: Dativ for all genders. Correct: dem (m/n), der (f). Wrong: Akkusativ or wrong gender."""
-        verbs_dat = [("helfe", "helfen"), ("antworte", "antworten"), ("danke", "danken")]
-        # (noun, gender, dativ_article, list of wrong articles)
-        nouns = [
-            ("Bruder", "m", "dem", ["den", "die", "das", "der"]),
-            ("Mann", "m", "dem", ["den", "die", "das", "der"]),
-            ("Vater", "m", "dem", ["den", "die", "das", "der"]),
-            ("Freund", "m", "dem", ["den", "die", "das", "der"]),
-            ("Kind", "n", "dem", ["das", "den", "die", "der"]),
-            ("Auto", "n", "dem", ["das", "den", "die", "der"]),
-            ("Frau", "f", "der", ["die", "den", "das", "dem"]),
-            ("Mutter", "f", "der", ["die", "den", "das", "dem"]),
-            ("Schwester", "f", "der", ["die", "den", "das", "dem"]),
-        ]
-        gender_names = {"m": "чоловічого", "n": "середнього", "f": "жіночого"}
+        """A1: Akkusativ for all genders — all subjects × verbs × nouns. Gender-contrastive: den Hund ✅ vs den Auto ❌."""
+        verb_stems = [("such", "suchen"), ("seh", "sehen"), ("kauf", "kaufen"), ("brauch", "brauchen"), ("hab", "haben")]
+        # Split nouns by gender for contrastive pairs
+        masc_nouns = [(n, g) for n, g in self.nouns_with_gender if g == "m"]
+        neut_nouns = [(n, g) for n, g in self.nouns_with_gender if g == "n"]
+        fem_nouns  = [(n, g) for n, g in self.nouns_with_gender if g == "f"]
         data = []
         for _ in range(count):
             sub_key = random.choice(list(self.subjects.keys()))
             dn = self.get_display_name(sub_key)
-            verb, v_inf = random.choice(verbs_dat)
-            v_form = self.get_verb_form(verb[:-1], sub_key)
-            noun, gender, c_art, wrong_articles = random.choice(nouns)
+            stem, v_inf = random.choice(verb_stems)
+            v_form = self.get_verb_form(stem, sub_key)
+            r = random.random()
+            if r < 0.35:
+                # Correct masc: "den Hund" ✅
+                noun, gender = random.choice(masc_nouns)
+                data.append({"input": f"{dn} {v_form} den {noun}.", "output": "✅ Correct."})
+            elif r < 0.55:
+                # Wrong: "den" + neuter/feminine noun ❌ (most frequent learner error)
+                noun, gender = random.choice(neut_nouns + fem_nouns)
+                c_art = self.articles["akk"][gender]
+                data.append({
+                    "input": f"{dn} {v_form} den {noun}.",
+                    "output": f"❌ Incorrect.\n✅ Correct: {dn} {v_form} {c_art} {noun}.\n📝 Пояснення: Іменник '{noun}' — {self.gender_names[gender]} роду. У Akkusativ артикль — '{c_art}', а не 'den'."
+                })
+            elif r < 0.75:
+                # Correct neut/fem: "das Auto" ✅ / "die Katze" ✅
+                noun, gender = random.choice(neut_nouns + fem_nouns)
+                c_art = self.articles["akk"][gender]
+                data.append({"input": f"{dn} {v_form} {c_art} {noun}.", "output": "✅ Correct."})
+            else:
+                # Other wrong articles (dem, der for masc, etc.)
+                noun, gender = random.choice(self.nouns_with_gender)
+                c_art = self.articles["akk"][gender]
+                wrong_articles = [a for a in self.all_def_articles if a != c_art]
+                w_art = random.choice(wrong_articles)
+                data.append({
+                    "input": f"{dn} {v_form} {w_art} {noun}.",
+                    "output": f"❌ Incorrect.\n✅ Correct: {dn} {v_form} {c_art} {noun}.\n📝 Пояснення: Дієслово '{v_inf}' вимагає Akkusativ. Для {self.gender_names[gender]} роду артикль у Akkusativ — '{c_art}', а не '{w_art}'."
+                })
+        return data
+
+    def generate_article_required_akkusativ(self, count=500):
+        """A1: Countable noun needs article after haben/brauchen — all subjects × nouns."""
+        verb_stems = [("hab", "haben"), ("brauch", "brauchen"), ("kauf", "kaufen"), ("seh", "sehen")]
+        indef_art = {"m": "einen", "n": "ein", "f": "eine"}
+        data = []
+        for _ in range(count):
+            sub_key = random.choice(list(self.subjects.keys()))
+            dn = self.get_display_name(sub_key)
+            stem, v_inf = random.choice(verb_stems)
+            v_form = self.get_verb_form(stem, sub_key)
+            noun, gender = random.choice(self.nouns_with_gender)
+            use_definite = random.random() > 0.5
+            art = self.articles["akk"][gender] if use_definite else indef_art[gender]
+            if random.random() > 0.5:
+                data.append({
+                    "input": f"{dn} {v_form} {noun}.",
+                    "output": f"❌ Incorrect.\n✅ Correct: {dn} {v_form} {art} {noun}.\n📝 Пояснення: Злічний іменник '{noun}' потребує артикля (наприклад '{art}')."
+                })
+            else:
+                data.append({"input": f"{dn} {v_form} {art} {noun}.", "output": "✅ Correct."})
+        return data
+
+    def generate_dativ(self, count=1000):
+        """A2: Dativ for all genders — all subjects × verbs × nouns from shared pool."""
+        verb_stems = [("helf", "helfen"), ("antwort", "antworten"), ("dank", "danken")]
+        data = []
+        for _ in range(count):
+            sub_key = random.choice(list(self.subjects.keys()))
+            dn = self.get_display_name(sub_key)
+            stem, v_inf = random.choice(verb_stems)
+            v_form = self.get_verb_form(stem, sub_key)
+            noun, gender = random.choice(self.nouns_with_gender)
+            c_art = self.articles["dat"][gender]
+            wrong_articles = [a for a in self.all_def_articles if a != c_art]
             w_art = random.choice(wrong_articles)
             if random.random() > 0.5:
                 data.append({
                     "input": f"{dn} {v_form} {w_art} {noun}.",
-                    "output": f"❌ Incorrect.\n✅ Correct: {dn} {v_form} {c_art} {noun}.\n📝 Пояснення: Дієслово '{v_inf}' завжди вимагає Dativ. Для {gender_names[gender]} роду артикль у Dativ — '{c_art}', а не '{w_art}'."
+                    "output": f"❌ Incorrect.\n✅ Correct: {dn} {v_form} {c_art} {noun}.\n📝 Пояснення: Дієслово '{v_inf}' завжди вимагає Dativ. Для {self.gender_names[gender]} роду артикль у Dativ — '{c_art}', а не '{w_art}'."
                 })
             else:
                 data.append({"input": f"{dn} {v_form} {c_art} {noun}.", "output": "✅ Correct."})
