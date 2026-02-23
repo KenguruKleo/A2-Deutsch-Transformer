@@ -13,8 +13,6 @@ Usage:
 """
 
 import json
-import torch
-import torch.nn.functional as F
 import sys
 import argparse
 from pathlib import Path
@@ -24,44 +22,8 @@ from collections import defaultdict
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
-from src.model.model import TransformerModel
-from src.tokenizer.tokenizer import Tokenizer
-from src.config import load_config, get_device
-
-
-def generate_response(text, model, tokenizer, config, device):
-    """Generate model response for a given input text."""
-    input_ids = tokenizer.encode(text, add_bos=True, add_eos=False)
-    input_tensor = torch.tensor([input_ids], dtype=torch.long).to(device)
-    
-    max_new_tokens = 64
-    temperature = config.generation.temperature
-    top_k = config.generation.top_k
-
-    for _ in range(max_new_tokens):
-        idx_cond = input_tensor[:, -config.model.max_seq_len:]
-        
-        with torch.no_grad():
-            logits = model(idx_cond)
-        
-        logits = logits[:, -1, :] / temperature
-        
-        if top_k is not None:
-            v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
-            logits[logits < v[:, [-1]]] = -float('Inf')
-        
-        probs = F.softmax(logits, dim=-1)
-        next_token = torch.multinomial(probs, num_samples=1)
-        input_tensor = torch.cat((input_tensor, next_token), dim=1)
-        
-        if next_token.item() == tokenizer.eos_id:
-            break
-
-    full_ids = input_tensor[0].tolist()
-    if full_ids[0] == tokenizer.bos_id:
-        full_ids = full_ids[1:]
-        
-    return tokenizer.decode(full_ids)
+from src.config import load_config
+from src.inference import load_model, generate_response
 
 
 def parse_model_output(full_output, input_text):
@@ -95,26 +57,8 @@ def normalize(text):
 
 def evaluate(model_path="model_final.pth", verbose=False):
     """Run full evaluation on the test dataset."""
-    # Load config
-    config = load_config(str(project_root / "config.yaml"))
-    
-    device = get_device(getattr(config.training, "device", None))
-
-    # Load model
-    tokenizer = Tokenizer(str(project_root / "src/tokenizer/vocab.json"))
-    checkpoint = torch.load(str(project_root / model_path), map_location=device)
-    
-    model = TransformerModel(
-        vocab_size=config.model.vocab_size,
-        max_seq_len=config.model.max_seq_len,
-        d_model=config.model.d_model,
-        n_heads=config.model.n_heads,
-        n_layers=config.model.n_layers,
-        d_ff=config.model.d_ff
-    ).to(device)
-    
-    model.load_state_dict(checkpoint['model_state_dict'])
-    model.eval()
+    config = load_config()
+    model, tokenizer, device = load_model(project_root / model_path, config)
     
     # Load test data
     test_path = Path(__file__).parent / "test_data.json"

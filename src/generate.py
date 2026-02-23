@@ -1,97 +1,30 @@
-import torch
-import torch.nn.functional as F
-import yaml
+import sys
 import argparse
-from src.model.model import TransformerModel
-from src.tokenizer.tokenizer import Tokenizer
-from src.config import load_config, get_device, get_project_root
+from pathlib import Path
 
-def generate(text, model_path=None, config_path=None):
-    # 1. Load Config
-    config = load_config(config_path)  # None → auto-finds config.yaml from project root
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-    device = get_device(getattr(config.training, "device", None))
-    
-    # 2. Load Tokenizer & Model
-    project_root = get_project_root()
-    tokenizer = Tokenizer(project_root / "src/tokenizer/vocab.json")
-    
-    if model_path is None:
-        model_path = project_root / "model_final.pth"
-    checkpoint = torch.load(model_path, map_location=device, weights_only=True)
-    
-    model = TransformerModel(
-        vocab_size=config.model.vocab_size,
-        max_seq_len=config.model.max_seq_len,
-        d_model=config.model.d_model,
-        n_heads=config.model.n_heads,
-        n_layers=config.model.n_layers,
-        d_ff=config.model.d_ff
-    ).to(device)
-    
-    model.load_state_dict(checkpoint['model_state_dict'])
-    model.eval()
+from src.config import load_config
+from src.inference import load_model, generate_response
 
-    # 3. Preparation
-    # We add BOS to help the model start
-    input_ids = tokenizer.encode(text, add_bos=True, add_eos=False)
-    input_tensor = torch.tensor([input_ids], dtype=torch.long).to(device)
-    
-    max_new_tokens = 50
-    temperature = config.generation.temperature
-    top_k = config.generation.top_k
 
-    # 4. Auto-regressive generation
-    for _ in range(max_new_tokens):
-        # We take only the last max_seq_len tokens
-        idx_cond = input_tensor[:, -config.model.max_seq_len:]
-        
-        # Get predictions
-        with torch.no_grad():
-            logits = model(idx_cond) # [batch=1, seq_len, vocab_size]
-        
-        # Take logits for the last token only
-        # logits size after this operation: [batch=1, 1, vocab_size]
-        logits = logits[:, -1, :] / temperature
-        
-        # Optional: Top-k filtering
-        if top_k is not None:
-            v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
-            logits[logits < v[:, [-1]]] = -float('Inf')
-        
-        # Softmax to get probabilities
-        probs = F.softmax(logits, dim=-1)
-        
-        # Sample from distribution
-        next_token = torch.multinomial(probs, num_samples=1)
-        
-        # Append to sequence
-        input_tensor = torch.cat((input_tensor, next_token), dim=1)
-        
-        # Stop if EOS reached
-        if next_token.item() == tokenizer.eos_id:
-            break
+def generate(text: str, model_path=None, config_path=None) -> None:
+    config = load_config(config_path)
+    model, tokenizer, device = load_model(model_path, config)
 
-    # 5. Decode
-    # We only decode what was generated AFTER the initial input
-    # But usually, it's easier to decode the whole thing and strip the input prefix
-    full_ids = input_tensor[0].tolist()
-    # Remove BOS (index 0)
-    if full_ids[0] == tokenizer.bos_id:
-        full_ids = full_ids[1:]
-        
-    result = tokenizer.decode(full_ids)
-    print("\n" + "="*50)
+    result = generate_response(text, model, tokenizer, config, device, max_new_tokens=50)
+
+    print("\n" + "=" * 50)
     print(f"Input:  {text}")
     print("-" * 50)
-    # The result contains the input text as well
     print(f"Output:\n{result}")
-    print("="*50)
+    print("=" * 50)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--text", type=str, required=True, help="Sentence to check")
-    parser.add_argument("--model", type=str, default="model_final.pth", help="Path to checkpoint")
+    parser.add_argument("--model", type=str, default=None, help="Path to checkpoint")
     args = parser.parse_args()
-    
+
     generate(args.text, args.model)
