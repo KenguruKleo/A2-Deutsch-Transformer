@@ -58,7 +58,6 @@ class TrainingConfig:
     epochs: int
     early_stopping_patience: int = 0
     decision_token_weight: float = 1.0
-    warmup_steps: int = 0
     device: str = "auto"
 
 

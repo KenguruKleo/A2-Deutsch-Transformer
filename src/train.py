@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
-import yaml
 import json
 from pathlib import Path
 from tqdm import tqdm
@@ -10,7 +9,7 @@ from src.tokenizer.tokenizer import Tokenizer
 from src.config import load_config, get_device, get_project_root
 
 class GrammarDataset(Dataset):
-    """Dataset for training the geometry model on grammar corrections."""
+    """Dataset for training the grammar correction model."""
     def __init__(self, data_path, tokenizer, max_len):
         self.tokenizer = tokenizer
         self.max_len = max_len
@@ -41,7 +40,7 @@ def train():
     config = load_config()
 
     # 2. Set Device (auto: cuda → mps → cpu)
-    device = get_device(getattr(config.training, "device", None))
+    device = get_device(config.training.device)
     print(f"🚀 Training on device: {device}")
 
     # 3. Init Tokenizer & Model
@@ -54,7 +53,8 @@ def train():
         d_model=config.model.d_model,
         n_heads=config.model.n_heads,
         n_layers=config.model.n_layers,
-        d_ff=config.model.d_ff
+        d_ff=config.model.d_ff,
+        weight_tying=config.model.weight_tying,
     ).to(device)
 
     # 4. Prepare Data
@@ -66,7 +66,7 @@ def train():
 
     # 5. Optimizer & Loss (with boosted weight for classification-decision tokens)
     optimizer = torch.optim.AdamW(model.parameters(), lr=float(config.training.learning_rate))
-    decision_w = getattr(config.training, "decision_token_weight", 1.0) or 1.0
+    decision_w = config.training.decision_token_weight
     decision_token_ids: set[int] = set()
     for tok_str in ["✅", "❌", "Correct", "Incorrect", "Correct:", "Incorrect."]:
         tid = tokenizer.token_to_id.get(tok_str)
@@ -78,7 +78,7 @@ def train():
 
     # 6. Training Loop with early stopping
     epochs = config.training.epochs
-    patience = getattr(config.training, "early_stopping_patience", 0) or 0
+    patience = config.training.early_stopping_patience
     best_val_loss = float("inf")
     best_state_dict = None
     epochs_without_improvement = 0
@@ -139,7 +139,7 @@ def train():
     # 7. Save best model
     if best_state_dict is not None:
         model.load_state_dict(best_state_dict)
-    save_path = Path("model_final.pth")
+    save_path = get_project_root() / "model_final.pth"
     torch.save({
         "model_state_dict": model.state_dict(),
         "vocab_size": config.model.vocab_size,

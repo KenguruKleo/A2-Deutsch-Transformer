@@ -53,6 +53,7 @@ def load_model(
         n_heads=config.model.n_heads,
         n_layers=config.model.n_layers,
         d_ff=config.model.d_ff,
+        weight_tying=config.model.weight_tying,
     ).to(device)
 
     model.load_state_dict(checkpoint["model_state_dict"])

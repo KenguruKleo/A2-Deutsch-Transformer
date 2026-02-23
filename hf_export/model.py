@@ -117,7 +117,7 @@ class TransformerModel(nn.Module):
     n_layers: 4, number of transformer blocks (layers)
     d_ff: 512, FFN inner dimension
     """
-    def __init__(self, vocab_size: int, max_seq_len: int, d_model: int, n_heads: int, n_layers: int, d_ff: int):
+    def __init__(self, vocab_size: int, max_seq_len: int, d_model: int, n_heads: int, n_layers: int, d_ff: int, weight_tying: bool = True):
         super().__init__()
         # 1. Embeddings [4000, 128]
         self.token_emb = nn.Embedding(vocab_size, d_model)
@@ -135,8 +135,9 @@ class TransformerModel(nn.Module):
         # 4. LM Head [128, 4000]
         self.lm_head = nn.Linear(d_model, vocab_size, bias=False)
         
-        # WEIGHT TYING: Tie input embedding and output projection weights
-        self.token_emb.weight = self.lm_head.weight
+        # WEIGHT TYING: share embedding and LM head weights to save ~512K params
+        if weight_tying:
+            self.token_emb.weight = self.lm_head.weight
         
         self.max_seq_len = max_seq_len
         self.apply(self._init_weights)
