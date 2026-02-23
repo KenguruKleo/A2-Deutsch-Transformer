@@ -151,8 +151,8 @@ class TransformerModel(nn.Module):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
         
         # If module has pos_emb (like our TransformerModel), initialize it too
-        if hasattr(module, 'pos_emb') and module.pos_emb is not None:
-            torch.nn.init.normal_(module.pos_emb, mean=0.0, std=0.02)
+        if isinstance(module, TransformerModel) and module.pos_emb is not None:
+            torch.nn.init.normal_(module.pos_emb.data, mean=0.0, std=0.02)
 
     def _create_causal_mask(self, seq_len, device):
         """

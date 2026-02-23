@@ -4,18 +4,21 @@ import yaml
 import argparse
 from src.model.model import TransformerModel
 from src.tokenizer.tokenizer import Tokenizer
-from src.config import load_config, get_device
+from src.config import load_config, get_device, get_project_root
 
-def generate(text, model_path="model_final.pth", config_path="config.yaml"):
+def generate(text, model_path=None, config_path=None):
     # 1. Load Config
-    config = load_config(config_path)
+    config = load_config(config_path)  # None → auto-finds config.yaml from project root
 
     device = get_device(getattr(config.training, "device", None))
     
     # 2. Load Tokenizer & Model
-    tokenizer = Tokenizer("src/tokenizer/vocab.json")
+    project_root = get_project_root()
+    tokenizer = Tokenizer(project_root / "src/tokenizer/vocab.json")
     
-    checkpoint = torch.load(model_path, map_location=device)
+    if model_path is None:
+        model_path = project_root / "model_final.pth"
+    checkpoint = torch.load(model_path, map_location=device, weights_only=True)
     
     model = TransformerModel(
         vocab_size=config.model.vocab_size,

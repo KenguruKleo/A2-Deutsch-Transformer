@@ -1204,7 +1204,7 @@ def _extract_pdf_words() -> list[str]:
     doc = fitz.open(str(pdf_path))
     all_text = ""
     for page in doc:
-        all_text += page.get_text() + " "
+        all_text += str(page.get_text()) + " "
     doc.close()
 
     # Знаходимо всі слова (2+ символи, з умлаутами)

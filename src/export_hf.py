@@ -3,11 +3,21 @@ import yaml
 import json
 import os
 import shutil
+from pathlib import Path
 from safetensors.torch import save_file
 
-def export_to_hf(model_path="model_final.pth", config_path="config.yaml", output_dir="hf_export"):
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+_PROJECT_ROOT = Path(__file__).parent.parent
+
+def export_to_hf(model_path=None, config_path=None, output_dir=None):
+    if model_path is None:
+        model_path = _PROJECT_ROOT / "model_final.pth"
+    if config_path is None:
+        config_path = _PROJECT_ROOT / "config.yaml"
+    if output_dir is None:
+        output_dir = _PROJECT_ROOT / "hf_export"
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"🚀 Loading config from {config_path}...")
     with open(config_path, "r", encoding="utf-8") as f:
@@ -39,7 +49,7 @@ def export_to_hf(model_path="model_final.pth", config_path="config.yaml", output
 
     # 2. Convert state_dict to Safetensors
     print(f"📦 Converting {model_path} to safetensors...")
-    checkpoint = torch.load(model_path, map_location="cpu")
+    checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)
     state_dict = checkpoint["model_state_dict"]
 
     # In our wrapper DeutschA2Model, the TransformerModel is under self.model
@@ -52,14 +62,15 @@ def export_to_hf(model_path="model_final.pth", config_path="config.yaml", output
 
     # 3. Copy Source files and Vocabulary
     # Files needed for HF to reconstruct the model code
-    shutil.copy("src/model/model.py", os.path.join(output_dir, "model.py"))
-    shutil.copy("src/model/modeling_custom.py", os.path.join(output_dir, "modeling_custom.py"))
-    shutil.copy("src/model/configuration_custom.py", os.path.join(output_dir, "configuration_custom.py"))
-    shutil.copy("src/tokenizer/tokenizer.py", os.path.join(output_dir, "tokenizer.py"))
+    src = _PROJECT_ROOT / "src"
+    shutil.copy(src / "model/model.py", output_dir / "model.py")
+    shutil.copy(src / "model/modeling_custom.py", output_dir / "modeling_custom.py")
+    shutil.copy(src / "model/configuration_custom.py", output_dir / "configuration_custom.py")
+    shutil.copy(src / "tokenizer/tokenizer.py", output_dir / "tokenizer.py")
     
-    vocab_in = "src/tokenizer/vocab.json"
-    vocab_out = os.path.join(output_dir, "vocab.json")
-    if os.path.exists(vocab_in):
+    vocab_in = src / "tokenizer/vocab.json"
+    vocab_out = output_dir / "vocab.json"
+    if vocab_in.exists():
         shutil.copy(vocab_in, vocab_out)
         print(f"✅ Copied vocab.json to {vocab_out}")
 

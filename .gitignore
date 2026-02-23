@@ -37,3 +37,6 @@ runs/
 wandb/
 
 tests/eval_results.json
+
+# Type checker cache
+.pyright/

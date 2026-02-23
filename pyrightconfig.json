@@ -1,0 +1,12 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "standard",
+  "ignore": [
+    "hf_export/**",
+    "hf_space/**",
+    "src/model/modeling_custom.py",
+    "src/model/configuration_custom.py"
+  ]
+}

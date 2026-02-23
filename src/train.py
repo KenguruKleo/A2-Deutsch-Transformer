@@ -7,7 +7,7 @@ from pathlib import Path
 from tqdm import tqdm
 from src.model.model import TransformerModel
 from src.tokenizer.tokenizer import Tokenizer
-from src.config import load_config, get_device
+from src.config import load_config, get_device, get_project_root
 
 class GrammarDataset(Dataset):
     """Dataset for training the geometry model on grammar corrections."""
@@ -45,7 +45,8 @@ def train():
     print(f"🚀 Training on device: {device}")
 
     # 3. Init Tokenizer & Model
-    tokenizer = Tokenizer("src/tokenizer/vocab.json")
+    project_root = get_project_root()
+    tokenizer = Tokenizer(project_root / "src/tokenizer/vocab.json")
     
     model = TransformerModel(
         vocab_size=config.model.vocab_size,
