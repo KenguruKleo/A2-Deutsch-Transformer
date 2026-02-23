@@ -73,6 +73,7 @@ A2-Deutsch-Transformer/
 │   │   ├── generator.py            # Main synthetic data generator
 │   │   └── generators/             # Specialized topic generators
 │   ├── train.py                    # Training loop (device auto-detection)
+│   ├── inference.py                # Shared model loading and generation logic
 │   ├── generate.py                 # CLI inference script
 │   └── export_hf.py                # Hugging Face export script
 ├── hf_export/                      # Bundle for HF Hub (weights + code)
@@ -123,16 +124,24 @@ pip install -r requirements.txt
 
 ## Testing
 
-To verify the model architecture and device compatibility, run the following command:
+Unit tests use **pytest**. To run them:
 
 ```bash
-# Run model unit tests
-python tests/test_model.py
+# Run all unit tests
+pytest tests/test_model.py -v
 ```
 
 These tests check:
-- Output dimensions (`[batch, seq_len, vocab_size]`).
-- Successful execution on the best available device (**CUDA**, **XPU**, **MPS**, or **CPU**).
+- Output shape (`[batch, seq_len, vocab_size]`).
+- Weight tying — embedding and LM head share the same tensor.
+- Successful forward pass on the best available device (**CUDA**, **XPU**, **MPS**, or **CPU**).
+- Causal mask is correctly lower-triangular.
+
+To also run type checking (equivalent to Pylance in the terminal):
+
+```bash
+pyright src/ tests/
+```
 
 ## Quick Start
 
@@ -149,6 +158,8 @@ python src/data/generator.py
 python src/train.py
 
 # 4. Test the model
+python -m src.generate --text "Ich habe nach Berlin gefahren."
+# or directly:
 python src/generate.py --text "Ich habe nach Berlin gefahren."
 
 # 5. Export to Hugging Face format
