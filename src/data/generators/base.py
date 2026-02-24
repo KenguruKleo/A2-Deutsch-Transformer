@@ -59,11 +59,13 @@ class BaseGenerator:
         self.nouns_with_gender = [
             ("Apfel", "m"), ("Schlüssel", "m"), ("Computer", "m"), ("Hund", "m"),
             ("Tisch", "m"), ("Stuhl", "m"), ("Bruder", "m"), ("Freund", "m"),
-            ("Mann", "m"), ("Vater", "m"),
+            ("Mann", "m"), ("Vater", "m"), ("Schrank", "m"), ("Löffel", "m"),
             ("Auto", "n"), ("Buch", "n"), ("Handy", "n"), ("Kind", "n"),
-            ("Brot", "n"), ("Bild", "n"), ("Glas", "n"),
+            ("Brot", "n"), ("Bild", "n"), ("Glas", "n"), ("Fenster", "n"),
+            ("Fahrrad", "n"), ("Zimmer", "n"), ("Bett", "n"), ("Haus", "n"),
             ("Katze", "f"), ("Tasche", "f"), ("Schwester", "f"), ("Frau", "f"),
-            ("Mutter", "f"), ("Lampe", "f"), ("Tür", "f"),
+            ("Mutter", "f"), ("Lampe", "f"), ("Tür", "f"), ("Küche", "f"),
+            ("Gabel", "f"), ("Zeitung", "f"),
         ]
 
         # Article lookup tables for all cases and genders

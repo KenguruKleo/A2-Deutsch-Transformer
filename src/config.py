@@ -45,10 +45,12 @@ class ModelConfig:
     vocab_size: int
     max_seq_len: int
     d_model: int
-    n_layers: int
+    n_enc_layers: int
+    n_dec_layers: int
     n_heads: int
     d_ff: int
     weight_tying: bool = True
+    pos_type: str = "sinusoidal"
 
 
 @dataclass

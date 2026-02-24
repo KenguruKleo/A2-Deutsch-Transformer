@@ -1,20 +1,21 @@
 # ── A2 Deutsch Grammar Tutor ── Model & Training Config ──
-
 model:
   vocab_size: 8000 # V — BPE subword tokens (trained on data + PDF)
-  max_seq_len: 64 # T — context window
-  d_model: 128 # embedding / hidden dimension
-  n_layers: 4 # L — decoder blocks
+  max_seq_len: 64 # T — max sequence length for both enc/dec
+  d_model: 256 # embedding / hidden dimension (increased for v2.0)
+  n_enc_layers: 3 # N — encoder blocks
+  n_dec_layers: 3 # N — decoder blocks
   n_heads: 4 # H — attention heads
   d_ff: 512 # FFN hidden dimension
   weight_tying: true # tie embeddings and LM head
+  pos_type: "sinusoidal" # v2.0 uses sinusoidal PE
 
 training:
   batch_size: 64
-  learning_rate: 3e-4
+  learning_rate: 0.0003
   epochs: 20
-  early_stopping_patience: 5  # stop if val loss has not improved for this many epochs (0 = disabled)
-  decision_token_weight: 5.0  # extra weight for ✅/❌/Correct/Incorrect tokens in loss (1.0 = no boost)
+  early_stopping_patience: 3 # stop if val loss has not improved for this many epochs (0 = disabled)
+  decision_token_weight: 1.5 # extra weight for ✅/❌/Correct/Incorrect tokens in loss (1.0 = no boost)
   device: "auto" # "auto" = best of cuda/xpu/mps/cpu, or set "cuda"|"xpu"|"mps"|"cpu"
 
 data:

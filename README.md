@@ -169,6 +169,11 @@ python src/tokenizer/train_tokenizer.py
 # 3. Run training
 python src/train.py
 
+# Advanced training options:
+python src/train.py --epochs 30          # Override epochs from config.yaml
+python src/train.py --continue          # Resume training from existing model_final.pth
+python src/train.py --continue --epochs 5 # Load last model and train for 5 more epochs
+
 # 4. Test the model
 python -m src.generate --text "Ich habe nach Berlin gefahren."
 # or directly:

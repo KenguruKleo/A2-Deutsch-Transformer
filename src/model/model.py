@@ -3,204 +3,219 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 
-class MultiHeadAttention(nn.Module):
+class SinusoidalPositionalEncoding(nn.Module):
     """
-    Multi-Head Self-Attention Implementation.
-    According to docs/architecture.md: d_model=128, n_heads=4.
+    Standard Sinusoidal Positional Encoding.
+    BART can use fixed or learned, we use fixed for zero-parameter efficiency.
     """
-    def __init__(self, d_model: int, n_heads: int):
+    def __init__(self, d_model: int, max_len: int = 512):
         super().__init__()
-        assert d_model % n_heads == 0, "d_model must be divisible by n_heads"
-        
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        self.register_buffer('pe', pe.unsqueeze(0))
+
+    def forward(self, x):
+        return x + self.pe[:, :x.size(1), :]
+
+class BARTAttention(nn.Module):
+    """
+    Standard Multi-Head Attention compatible with BART naming.
+    Used for Self-Attention and Cross-Attention.
+    """
+    def __init__(self, d_model: int, n_heads: int, dropout: float = 0.1):
+        super().__init__()
         self.d_model = d_model
         self.n_heads = n_heads
-        self.d_k = d_model // n_heads # 32, size of one head
+        self.d_k = d_model // n_heads
         
-        # GPT-2 style: One linear layer for Q, K, V combined [d_model, 3 * d_model]
-        self.c_attn = nn.Linear(d_model, 3 * d_model, bias=True)
-        
-        # Output Projection [d_model, d_model]
-        self.c_proj = nn.Linear(d_model, d_model, bias=True)
-
-    def forward(self, x, mask=None):
-        """
-        Args:
-            x (torch.Tensor): Input tensor of shape (batch_size, seq_len, d_model).
-            mask (torch.Tensor, optional): Mask for attention mechanism.
-
-        Returns:
-            torch.Tensor: Output tensor of shape (batch_size, seq_len, d_model).
-        """
-        # x: [batch, 64, 128]
-        batch_size, seq_len, _ = x.shape
-        
-        # 1. Projection to Q, K, V -> [batch, seq_len, 3 * d_model]
-        qkv = self.c_attn(x)
-        q, k, v = qkv.split(self.d_model, dim=-1)
-        
-        # 2. Split into heads: [batch, seq_len, d_model] -> [batch, seq_len, 4, 32] -> [batch, 4, 64, 32]
-        q = q.view(batch_size, seq_len, self.n_heads, self.d_k).transpose(1, 2)
-        k = k.view(batch_size, seq_len, self.n_heads, self.d_k).transpose(1, 2)
-        v = v.view(batch_size, seq_len, self.n_heads, self.d_k).transpose(1, 2)
-        
-        # 3. Attention Scores: (Q @ K^T) / sqrt(32) -> [batch, 4, 64, 64]
-        scores = (q @ k.transpose(-2, -1)) / math.sqrt(self.d_k)
-        
-        # Masking (prevent model from looking at future tokens during generation)
-        if mask is not None:
-            # [batch, n_heads, 64, 64] -> [batch, n_heads, 64, 64]
-            scores = scores.masked_fill(mask == 0, float('-inf'))
-            
-        # [batch, n_heads, 64, 64]
-        weights = F.softmax(scores, dim=-1)
-        
-        # 4. Mix with Values: Weights @ V -> [batch, 4, 64, 32]
-        # Weights: [batch, 4, 64, 64], V: [batch, 4, 64, 32]
-        attn_out = weights @ v
-        
-        # 5. Concatenation: [batch, 4, 64, 32] -> [batch, 64, 128]
-        # attn_out.transpose(1, 2): [batch, 4, 64, 32] -> [batch, 64, 4, 32]
-        # .contiguous().view(): [batch, 64, 4, 32] -> [batch, 64, 128]
-        attn_out = attn_out.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
-        
-        # 6. Output Projection: [batch, 64, 128] @ [128, 128] -> [batch, 64, 128]
-        return self.c_proj(attn_out)
-
-class TransformerBlock(nn.Module):
-    """
-    One Transformer Block: Attention + LayerNorm + FFN.
-    d_model - model dimensionality, 128
-    n_heads - number of heads, 4
-    d_ff - FFN inner layer dimensionality, 512
-    dropout - dropout rate, 0.1
-    """
-    def __init__(self, d_model: int, n_heads: int, d_ff: int, dropout: float = 0.1):
-        super().__init__()
-        self.attn = MultiHeadAttention(d_model, n_heads)
-        self.ln_1 = nn.LayerNorm(d_model)
-        self.ln_2 = nn.LayerNorm(d_model)
-        
-        # MLP (FFN): GPT-2 style naming c_fc and c_proj
-        self.mlp = nn.ModuleDict({
-            "c_fc": nn.Linear(d_model, d_ff, bias=True),
-            "c_proj": nn.Linear(d_ff, d_model, bias=True)
-        })
+        # BART naming convention
+        self.q_proj = nn.Linear(d_model, d_model)
+        self.k_proj = nn.Linear(d_model, d_model)
+        self.v_proj = nn.Linear(d_model, d_model)
+        self.out_proj = nn.Linear(d_model, d_model)
         
         self.dropout = nn.Dropout(dropout)
 
+    def forward(self, x, keys=None, values=None, mask=None):
+        batch_size, seq_len, _ = x.shape
+        keys = keys if keys is not None else x
+        values = values if values is not None else keys
+        kv_len = keys.shape[1]
+
+        # Project and split into heads
+        q = self.q_proj(x).view(batch_size, seq_len, self.n_heads, self.d_k).transpose(1, 2)
+        k = self.k_proj(keys).view(batch_size, kv_len, self.n_heads, self.d_k).transpose(1, 2)
+        v = self.v_proj(values).view(batch_size, kv_len, self.n_heads, self.d_k).transpose(1, 2)
+
+        # Scaled Dot-Product Attention
+        scores = (q @ k.transpose(-2, -1)) / math.sqrt(self.d_k)
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, float('-inf'))
+        
+        attn = F.softmax(scores, dim=-1)
+        attn = self.dropout(attn)
+        
+        out = (attn @ v).transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
+        return self.out_proj(out)
+
+class BARTEncoderLayer(nn.Module):
+    def __init__(self, d_model: int, n_heads: int, d_ff: int, dropout: float = 0.1):
+        super().__init__()
+        self.self_attn = BARTAttention(d_model, n_heads, dropout)
+        self.self_attn_layer_norm = nn.LayerNorm(d_model)
+        
+        self.fc1 = nn.Linear(d_model, d_ff)
+        self.fc2 = nn.Linear(d_ff, d_model)
+        self.final_layer_norm = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(dropout)
+
     def forward(self, x, mask=None):
-        # 1. Self-Attention Block
-        # Residual Connection 1: x = x + Attention(LayerNorm(x))
-        x = x + self.dropout(self.attn(self.ln_1(x), mask))
+        # 1. Self-Attention (Residual after LN - Post-LN style like BART)
+        residual = x
+        x = self.self_attn(x, mask=mask)
+        x = self.dropout(x)
+        x = self.self_attn_layer_norm(residual + x)
         
-        # 2. Feed-Forward Network Block
-        # Residual Connection 2: x = x + FFN(LayerNorm(x))
-        x_norm = self.ln_2(x)
-        
-        # Pass through MLP: c_fc -> GELU -> c_proj
-        x_ffn = self.mlp["c_fc"](x_norm)
-        x_ffn = F.gelu(x_ffn)
-        x_ffn = self.mlp["c_proj"](x_ffn)
-        
-        x = x + self.dropout(x_ffn)
+        # 2. FFN
+        residual = x
+        x = F.gelu(self.fc1(x))
+        x = self.fc2(x)
+        x = self.dropout(x)
+        x = self.final_layer_norm(residual + x)
         return x
 
-class TransformerModel(nn.Module):
+class BARTDecoderLayer(nn.Module):
+    def __init__(self, d_model: int, n_heads: int, d_ff: int, dropout: float = 0.1):
+        super().__init__()
+        self.self_attn = BARTAttention(d_model, n_heads, dropout)
+        self.self_attn_layer_norm = nn.LayerNorm(d_model)
+        
+        self.encoder_attn = BARTAttention(d_model, n_heads, dropout)
+        self.encoder_attn_layer_norm = nn.LayerNorm(d_model)
+        
+        self.fc1 = nn.Linear(d_model, d_ff)
+        self.fc2 = nn.Linear(d_ff, d_model)
+        self.final_layer_norm = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, memory, self_mask=None, cross_mask=None):
+        # 1. Masked Self-Attention
+        residual = x
+        x = self.self_attn(x, mask=self_mask)
+        x = self.dropout(x)
+        x = self.self_attn_layer_norm(residual + x)
+        
+        # 2. Cross-Attention
+        residual = x
+        x = self.encoder_attn(x, keys=memory, values=memory, mask=cross_mask)
+        x = self.dropout(x)
+        x = self.encoder_attn_layer_norm(residual + x)
+        
+        # 3. FFN
+        residual = x
+        x = F.gelu(self.fc1(x))
+        x = self.fc2(x)
+        x = self.dropout(x)
+        x = self.final_layer_norm(residual + x)
+        return x
+
+class GrammarTransformer(nn.Module):
     """
-    Main Transformer Decoder model (V=4000, T=64, L=4).
-    vocab_size: 4000, vocabulary size
-    max_seq_len: 64, maximum sequence length (context window)
-    d_model: 128, model dimensionality
-    n_heads: 4, number of attention heads
-    n_layers: 4, number of transformer blocks (layers)
-    d_ff: 512, FFN inner dimension
+    v2.0 Encoder-Decoder Transformer (BART-compatible structure).
+    Designed for Text-to-Text generation.
     """
-    def __init__(self, vocab_size: int, max_seq_len: int, d_model: int, n_heads: int, n_layers: int, d_ff: int, weight_tying: bool = True):
+    def __init__(self, vocab_size: int, max_seq_len: int, d_model: int, n_heads: int, 
+                 n_enc_layers: int, n_dec_layers: int, d_ff: int, dropout: float = 0.1):
         super().__init__()
         
-        # POSITIONAL EMBEDDINGS [max_seq_len, d_model]
-        # GPT-2 uses nn.Embedding for wpe
-        wpe = nn.Embedding(max_seq_len, d_model)
-
-        # transformer dict-like structure to match GPT2 naming
-        self.transformer = nn.ModuleDict({
-            # 2. Token Embeddings [vocab_size, d_model]
-            "wte": nn.Embedding(vocab_size, d_model),
-            
-            # 3. Positional Embeddings
-            "wpe": wpe,
-            
-            # 4. Stacking: Transformer blocks (named 'h' in GPT2)
-            "h": nn.ModuleList([
-                TransformerBlock(d_model, n_heads, d_ff) for _ in range(n_layers)
-            ]),
-            
-            # 5. Final Norm (named 'ln_f' in GPT2)
-            "ln_f": nn.LayerNorm(d_model)
-        })
+        self.shared = nn.Embedding(vocab_size, d_model)
+        self.pos_encoding = SinusoidalPositionalEncoding(d_model, max_seq_len)
         
-        # 6. LM Head [d_model, vocab_size]
+        # Encoder
+        self.encoder_layers = nn.ModuleList([
+            BARTEncoderLayer(d_model, n_heads, d_ff, dropout) for _ in range(n_enc_layers)
+        ])
+        
+        # Decoder
+        self.decoder_layers = nn.ModuleList([
+            BARTDecoderLayer(d_model, n_heads, d_ff, dropout) for _ in range(n_dec_layers)
+        ])
+        
+        # Final parameters
         self.lm_head = nn.Linear(d_model, vocab_size, bias=False)
+        self.lm_head.weight = self.shared.weight # Weight tying
         
-        # WEIGHT TYING: share embedding and LM head weights
-        if weight_tying:
-            self.lm_head.weight = self.transformer["wte"].weight
-        
+        self.d_model = d_model
         self.max_seq_len = max_seq_len
         self.apply(self._init_weights)
 
     def _init_weights(self, module):
-        """ Initialize weights according to Transformer best practices. """
         if isinstance(module, nn.Linear):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
             if module.bias is not None:
                 torch.nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+
+    def encode(self, src_ids, mask=None):
+        x = self.pos_encoding(self.shared(src_ids))
+        for layer in self.encoder_layers:
+            x = layer(x, mask)
+        return x
+
+    def decode(self, tgt_ids, memory, self_mask=None, cross_mask=None):
+        x = self.pos_encoding(self.shared(tgt_ids))
+        for layer in self.decoder_layers:
+            x = layer(x, memory, self_mask, cross_mask)
+        return x
+
+    def forward(self, src_ids, tgt_ids, src_mask=None, tgt_mask=None):
+        memory = self.encode(src_ids, src_mask)
+        out = self.decode(tgt_ids, memory, tgt_mask, src_mask)
+        return self.lm_head(out)
+
+    def generate(self, src_ids, bos_id, eos_id, pad_id=0, max_len=64):
+        """
+        Autoregressive generation supporting batches and masking.
+        """
+        device = src_ids.device
+        batch_size = src_ids.shape[0]
         
-        # If module has wpe (like our TransformerModel), initialize it too
-        # This check is no longer needed as wpe is now a direct nn.Embedding within the ModuleDict
-        # and will be initialized by the nn.Embedding check above.
+        # 1. Create Source Mask for padding: [batch, 1, 1, src_len]
+        src_mask = (src_ids != pad_id).unsqueeze(1).unsqueeze(2)
+        
+        # 2. Encode once (with mask)
+        memory = self.encode(src_ids, src_mask)
+        
+        # 3. Start decoding
+        ys = torch.full((batch_size, 1), bos_id, dtype=torch.long, device=device)
+        
+        # Keep track of which sequences are finished
+        unfinished_sequences = torch.ones(batch_size, dtype=torch.long, device=device)
+        
+        for _ in range(max_len - 1):
+            tgt_mask = self._create_causal_mask(ys.size(1), device)
+            # Use src_mask as cross_mask to ignore PAD tokens in encoder memory
+            out = self.decode(ys, memory, tgt_mask, src_mask)
+            logits = self.lm_head(out[:, -1, :])
+            
+            next_word = torch.argmax(logits, dim=-1) # [batch]
+            
+            # Update ys
+            ys = torch.cat([ys, next_word.unsqueeze(1)], dim=1)
+            
+            # Update status
+            unfinished_sequences = unfinished_sequences & (next_word != eos_id).long()
+            
+            # Stop if all sequences in batch are done
+            if unfinished_sequences.max() == 0:
+                break
+                
+        return ys
 
     def _create_causal_mask(self, seq_len, device):
-        """
-        Creates a triangular mask [1, 1, seq_len, seq_len] to prevent 
-        the model from looking at future tokens.
-        """
-        # 1. Square matrix of ones [seq_len, seq_len]
-        mask_ones = torch.ones((seq_len, seq_len), device=device)
-        
-        # 2. Extract lower triangle. [seq_len, seq_len]
-        mask_tril = torch.tril(mask_ones)
-        
-        # 3. Add dimensions for attention compatibility: [1, 1, seq_len, seq_len]
-        return mask_tril.view(1, 1, seq_len, seq_len)
-
-    def forward(self, ids):
-        # ids: [batch, seq_len]
-        batch, seq_len = ids.shape
-        
-        # 1. Tokens -> Embeddings. Using HF-style wte/wpe names
-        tok_emb = self.transformer["wte"](ids)
-        
-        # 2. Get positional embeddings from transformer.wpe
-        # GPT-2 wpe is an Embedding layer
-        pos_ids = torch.arange(seq_len, device=ids.device).unsqueeze(0)
-        pos_emb = self.transformer.wpe(pos_ids)
-        
-        # 3. Combine token meaning and its position.
-        x = tok_emb + pos_emb
-        
-        # 4. Create Causal Mask
-        mask = self._create_causal_mask(seq_len, ids.device)
-        
-        # Pass through transformer layers ('h')
-        for block in self.transformer["h"]:
-            x = block(x, mask)
-        
-        # Final Layer Normalization ('ln_f')
-        x = self.transformer["ln_f"](x)
-        
-        # LM Head -> Token logits for each position
-        logits = self.lm_head(x)
-        return logits
+        mask = torch.tril(torch.ones((seq_len, seq_len), device=device)).bool()
+        return mask.unsqueeze(0).unsqueeze(0)
