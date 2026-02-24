@@ -1,13 +1,34 @@
 ---
-language: de
+language:
+- de
+- uk
 license: mit
 pipeline_tag: text-generation
 tags:
 - grammar
 - german
+- deutsch
 - transformer
 - education
 - pytorch
+- gpt2
+widget:
+- text: "Ich habe den Auto."
+  example_title: "Akkusativ correction"
+- text: "Heute я gehe додому."
+  example_title: "Mixed language / Mixed grammar"
+- text: "Dann я bin gegangen."
+  example_title: "Inversion / Perfekt"
+model-index:
+- name: Deutsch A2 Grammar Transformer
+  results:
+  - task:
+      type: text-generation
+      name: Grammar Correction
+    metrics:
+    - type: accuracy
+      value: 99.6
+      name: Detection Accuracy
 ---
 
 # Deutsch A2 Grammar Transformer (Ukrainian Explanations)
@@ -52,24 +73,29 @@ The model covers over 18 essential grammar topics for A1 and A2 levels.
 | **Präteritum** | A2 | Ich war zu Hause. | Ich waren zu Hause. | ✅ Correct: Ich war zu Hause. <br> 📝 Пояснення: У минулому часі (Präteritum) дієслово 'sein' для 'ich' має форму 'war'. |
 
 ## 🛠 Architecture
-- **Type:** Transformer Decoder (GPT-style)
-- **Parameters:** ~5M (Model size: 2.5 MB)
+- **Type:** Transformer Decoder (GPT-2 style)
+- **Parameters:** ~5.5M
 - **Layers:** 4
 - **Attention Heads:** 4
 - **Embedding Dim:** 128
-- **Tokenizer:** Custom Word-level (4,000 tokens)
+- **Tokenizer:** Byte-level BPE (8,000 tokens)
 
 ## 📖 How to Use
-Since this model uses a custom architecture, you must enable `trust_remote_code=True`.
+The model is fully compatible with the standard `transformers` library. No custom code is required.
 
 ```python
-from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
-# Load the model
-model = AutoModelForCausalLM.from_pretrained(
-    "kengurukleo/deutsch_a2_transformer", 
-    trust_remote_code=True
-)
+# Load model and tokenizer
+model_id = "kengurukleo/deutsch_a2_transformer"
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+model = AutoModelForCausalLM.from_pretrained(model_id)
+
+# Test generation
+text = "Ich habe den Auto."
+inputs = tokenizer(text, return_tensors="pt")
+outputs = model.generate(**inputs, max_new_tokens=64)
+print(tokenizer.decode(outputs[0], skip_special_tokens=True))
 ```
 
 ## 👨‍💻 Author
