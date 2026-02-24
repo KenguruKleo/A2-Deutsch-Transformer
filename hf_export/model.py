@@ -17,10 +17,10 @@ class MultiHeadAttention(nn.Module):
         self.d_k = d_model // n_heads # 32, size of one head
         
         # GPT-2 style: One linear layer for Q, K, V combined [d_model, 3 * d_model]
-        self.c_attn = nn.Linear(d_model, 3 * d_model, bias=False)
+        self.c_attn = nn.Linear(d_model, 3 * d_model, bias=True)
         
         # Output Projection [d_model, d_model]
-        self.c_proj = nn.Linear(d_model, d_model, bias=False)
+        self.c_proj = nn.Linear(d_model, d_model, bias=True)
 
     def forward(self, x, mask=None):
         """
@@ -82,8 +82,8 @@ class TransformerBlock(nn.Module):
         
         # MLP (FFN): GPT-2 style naming c_fc and c_proj
         self.mlp = nn.ModuleDict({
-            "c_fc": nn.Linear(d_model, d_ff),
-            "c_proj": nn.Linear(d_ff, d_model)
+            "c_fc": nn.Linear(d_model, d_ff, bias=True),
+            "c_proj": nn.Linear(d_ff, d_model, bias=True)
         })
         
         self.dropout = nn.Dropout(dropout)
@@ -139,12 +139,12 @@ class TransformerModel(nn.Module):
             "ln_f": nn.LayerNorm(d_model)
         })
         
-        # 5. LM Head [d_model, vocab_size]
+        # 6. LM Head [d_model, vocab_size]
         self.lm_head = nn.Linear(d_model, vocab_size, bias=False)
         
         # WEIGHT TYING: share embedding and LM head weights
         if weight_tying:
-            self.transformer["wte"].weight = self.lm_head.weight
+            self.lm_head.weight = self.transformer["wte"].weight
         
         self.max_seq_len = max_seq_len
         self.apply(self._init_weights)

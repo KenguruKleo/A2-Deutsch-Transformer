@@ -22,9 +22,12 @@ def check_grammar(text: str) -> str:
 
     output_ids = model.generate(
         input_ids,
-        max_length=64, # Total length including prompt must be <= 64
+        max_length=64,
+        do_sample=True,
+        temperature=0.3,
+        top_k=50,
         eos_token_id=eos_id,
-        pad_token_id=eos_id, # Standard practice for GPT-2 without pad token
+        pad_token_id=eos_id, # Standard practice for GPT-2 padding
     )
 
     # Decode only the generated part (after the prompt)
@@ -32,7 +35,7 @@ def check_grammar(text: str) -> str:
     if eos_id in generated:
         generated = generated[:generated.index(eos_id)]
 
-    return tokenizer.decode(generated).strip()
+    return tokenizer.decode(generated, skip_special_tokens=True).strip()
 
 
 # Gradio interface
