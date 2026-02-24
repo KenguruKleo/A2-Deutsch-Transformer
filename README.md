@@ -45,7 +45,7 @@ For a complete list of examples and model explanations for each topic, see:
 ## Architecture
 
 ```
-Transformer Decoder Only (v1.0)
+Transformer Decoder Only (v1.2) - Native GPT-2 compatible
 ├── Tokenizer: Byte-level BPE, 8,000 tokens (HuggingFace tokenizers)
 ├── V = 8,000 tokens
 ├── T = 64  (max sequence length)
@@ -53,12 +53,18 @@ Transformer Decoder Only (v1.0)
 ├── L = 4 Layers
 ├── H = 4 Attention Heads
 ├── Weight tying = ON (shared weights between Embeddings and LM Head)
-└── Precision = FP16 → Model size ≈ 2.5 MB
+└── Precision = FP16 → Model size ≈ 11.5 MB (Safetensors)
 
 Detailed mathematical description of all matrix transformations can be found in [docs/architecture.md](docs/architecture.md).
 
-> **v2.0 (in progress — `next` branch):** Encoder-Decoder + BPE tokenizer → [docs/architecture_v2.md](docs/architecture_v2.md)
+> **v2.0 (upcoming — `next` branch):** Encoder-Decoder + BPE tokenizer → [docs/architecture_v2.md](docs/architecture_v2.md)
 ```
+
+## Release History
+
+*   **v1.0 (Proof of Concept):** Initial release with a basic Transformer Decoder and a word-level vocabulary.
+*   **v1.1 (BPE Tokenizer):** Migration to a Byte-level BPE tokenizer (8,000 tokens) for better handling of unknown words and improved performance.
+*   **v1.2 (Hugging Face Native):** Refactored to be a fully compatible **GPT-2** model. Removed the need for `trust_remote_code=True`, remapped weights for native loading, and enabled the Inference Widget on Hugging Face. Added biases for better compatibility.
 
 ## Project Structure
 
@@ -243,16 +249,15 @@ Detailed results are written to `tests/eval_results.json`. At the end of each ru
 This model is hosted on the [Hugging Face Hub](https://huggingface.co/kengurukleo/deutsch_a2_transformer). Below are instructions for users and developers.
 
 ### 📥 For Users (Loading the Model)
-You can load and use this model directly in your Python code using the `transformers` library. Note that `trust_remote_code=True` is required because the model uses a custom architecture and tokenizer.
+You can load and use this model directly in your Python code using the `transformers` library. As of **v1.2**, the model is a native GPT-2 and **does not require** `trust_remote_code=True`.
 
 ```python
-from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
-# Load model and use custom code from the Hub
-model = AutoModelForCausalLM.from_pretrained(
-    "kengurukleo/deutsch_a2_transformer", 
-    trust_remote_code=True
-)
+# Load model and tokenizer natively
+model_id = "kengurukleo/deutsch_a2_transformer"
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+model = AutoModelForCausalLM.from_pretrained(model_id)
 ```
 
 ### 🛠 For Developers (Export and Publish)

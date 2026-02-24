@@ -99,5 +99,11 @@ outputs = model.generate(**inputs, max_new_tokens=64)
 print(tokenizer.decode(outputs[0], skip_special_tokens=True))
 ```
 
+## 📜 Release History
+
+*   **v1.0 (Proof of Concept):** Initial release with a basic Transformer Decoder and word-level vocabulary.
+*   **v1.1 (BPE Tokenizer):** Migration to a Byte-level BPE tokenizer (8,000 tokens) for better handling of unknown words.
+*   **v1.2 (GPT-2 Native):** Refactored to be a fully compatible **GPT-2** model. Removed `trust_remote_code=True`, remapped weights for native loading, and enabled the Inference Widget.
+
 ## 👨‍💻 Author
 Created by [KenguruKleo](https://github.com/KenguruKleo).
