@@ -1,7 +1,7 @@
 # ── A2 Deutsch Grammar Tutor ── Model & Training Config ──
 
 model:
-  vocab_size: 4000 # V — curated word-level tokens (A2 forms + PDF words)
+  vocab_size: 8000 # V — BPE subword tokens (trained on data + PDF)
   max_seq_len: 64 # T — context window
   d_model: 128 # embedding / hidden dimension
   n_layers: 4 # L — decoder blocks

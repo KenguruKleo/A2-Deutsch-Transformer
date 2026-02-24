@@ -74,10 +74,6 @@ if __name__ == "__main__":
     master.save(data[:split], config.data.train_path)
     master.save(data[split:], config.data.val_path)
 
-    # Rebuild vocab from new train/val so all generated words are in the dictionary
-    from src.tokenizer.build_vocab import build_vocab
-    vocab = build_vocab()
-    vocab_path = Path(__file__).resolve().parent.parent / "tokenizer" / "vocab.json"
-    with open(vocab_path, "w", encoding="utf-8") as f:
-        json.dump(vocab, f, ensure_ascii=False, indent=2)
-    print(f"✅ vocab.json rebuilt — {len(vocab)} tokens")
+    # Retrain BPE tokenizer on new data so all generated words are covered
+    from src.tokenizer.train_tokenizer import train as train_tokenizer
+    train_tokenizer()

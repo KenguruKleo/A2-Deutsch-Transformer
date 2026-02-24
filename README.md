@@ -45,8 +45,9 @@ For a complete list of examples and model explanations for each topic, see:
 ## Architecture
 
 ```
-Transformer Decoder Only
-├── V = 4,000 tokens (words + forms + explanations)
+Transformer Decoder Only (v1.0)
+├── Tokenizer: Byte-level BPE, 8,000 tokens (HuggingFace tokenizers)
+├── V = 8,000 tokens
 ├── T = 64  (max sequence length)
 ├── d_model = 128
 ├── L = 4 Layers
@@ -55,6 +56,8 @@ Transformer Decoder Only
 └── Precision = FP16 → Model size ≈ 2.5 MB
 
 Detailed mathematical description of all matrix transformations can be found in [docs/architecture.md](docs/architecture.md).
+
+> **v2.0 (in progress — `next` branch):** Encoder-Decoder + BPE tokenizer → [docs/architecture_v2.md](docs/architecture_v2.md)
 ```
 
 ## Project Structure
@@ -67,8 +70,9 @@ A2-Deutsch-Transformer/
 │   │   ├── configuration_custom.py # HF Config wrapper
 │   │   └── modeling_custom.py      # HF Model wrapper (custom code)
 │   ├── tokenizer/
-│   │   ├── build_vocab.py          # PDF analysis and vocab creation
-│   │   └── tokenizer.py            # Word-level tokenizer
+│   │   ├── train_tokenizer.py      # Trains BPE tokenizer (HF tokenizers library)
+│   │   ├── tokenizer.py            # BPE tokenizer wrapper (same API as v1.0)
+│   │   └── build_vocab.py          # Legacy word-level vocab builder (v1.0 only)
 │   ├── data/
 │   │   ├── generator.py            # Main synthetic data generator
 │   │   └── generators/             # Specialized topic generators
@@ -92,8 +96,10 @@ A2-Deutsch-Transformer/
 
 ## How It Works
 
-### 1. `build_vocab.py`
-Creates the "brain" of the tokenizer. It analyzes the `Begegnungen_A2.pdf` textbook, extracts the most frequent German words, adds conjugation tables, and includes words for explanations. The result is a `vocab.json` file with 4000 unique tokens.
+### 1. `train_tokenizer.py`
+Trains a **Byte-level BPE** tokenizer on the project data. Reads all `input`/`output` fields from `train.jsonl` + `val.jsonl` and extracts text from the `Begegnungen_A2.pdf` textbook. The result is a `tokenizer.json` file with 8000 subword tokens — compatible with HuggingFace `PreTrainedTokenizerFast`. Unlike the old word-level vocab, BPE never produces `<UNK>`: any unknown word is split into known subparts.
+
+To measure tokenizer quality after training: `python scripts/eval_tokenizer.py` — see **[Tokenizer Metrics](docs/tokenizer_metrics.md)** for full description of fertility, UNK rate, continuation rate, and sequence length metrics.
 
 ### 2. `generator.py`
 Generates thousands of training examples. It knows grammar rules, takes a correct sentence and intentionally "breaks" it (e.g., changes word order or auxiliary verb), adding an explanation of why it is an error.
@@ -148,11 +154,11 @@ pyright src/ tests/
 Once the environment is set up and activated:
 
 ```bash
-# 1. Build vocabulary (if changing word lists)
-python src/tokenizer/build_vocab.py
-
-# 2. Generate training data
+# 1. Generate training data (also retrains the BPE tokenizer automatically)
 python src/data/generator.py
+
+# 1a. Or retrain tokenizer separately (after manual data changes)
+python src/tokenizer/train_tokenizer.py
 
 # 3. Run training
 python src/train.py

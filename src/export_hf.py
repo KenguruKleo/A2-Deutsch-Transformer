@@ -42,39 +42,60 @@ def export_to_hf(model_path=None, config_path=None, output_dir=None):
         }
     }
 
-    config_out = os.path.join(output_dir, "config.json")
+    config_out = output_dir / "config.json"
     with open(config_out, "w", encoding="utf-8") as f:
         json.dump(hf_config, f, indent=2)
-    print(f"✅ Saved HF config to {config_out}")
+    print(f"✅ Saved config.json")
 
     # 2. Convert state_dict to Safetensors
     print(f"📦 Converting {model_path} to safetensors...")
     checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)
     state_dict = checkpoint["model_state_dict"]
 
-    # In our wrapper DeutschA2Model, the TransformerModel is under self.model
-    # So we must prefix all keys with 'model.'
     tensors = {f"model.{k}": v.cpu().clone().contiguous() for k, v in state_dict.items()}
-    
-    safetensors_out = os.path.join(output_dir, "model.safetensors")
+
+    safetensors_out = output_dir / "model.safetensors"
     save_file(tensors, safetensors_out)
-    print(f"✅ Saved weights to {safetensors_out}")
+    print(f"✅ Saved model.safetensors")
 
-    # 3. Copy Source files and Vocabulary
-    # Files needed for HF to reconstruct the model code
+    # 3. Copy model source files
     src = _PROJECT_ROOT / "src"
-    shutil.copy(src / "model/model.py", output_dir / "model.py")
-    shutil.copy(src / "model/modeling_custom.py", output_dir / "modeling_custom.py")
-    shutil.copy(src / "model/configuration_custom.py", output_dir / "configuration_custom.py")
-    shutil.copy(src / "tokenizer/tokenizer.py", output_dir / "tokenizer.py")
-    
-    vocab_in = src / "tokenizer/vocab.json"
-    vocab_out = output_dir / "vocab.json"
-    if vocab_in.exists():
-        shutil.copy(vocab_in, vocab_out)
-        print(f"✅ Copied vocab.json to {vocab_out}")
+    shutil.copy(src / "model/model.py",                 output_dir / "model.py")
+    shutil.copy(src / "model/modeling_custom.py",       output_dir / "modeling_custom.py")
+    shutil.copy(src / "model/configuration_custom.py",  output_dir / "configuration_custom.py")
+    shutil.copy(src / "tokenizer/tokenizer.py",         output_dir / "tokenizer.py")
+    print("✅ Copied model source files")
 
-    print("\n🎉 Custom Model Export complete! Folder 'hf_export' is ready for upload.")
+    # 4. Save HuggingFace-compatible tokenizer (PreTrainedTokenizerFast)
+    #    This makes the tokenizer recognized as GPT-2 style on the HF Hub.
+    tok_json = src / "tokenizer/tokenizer.json"
+    if not tok_json.exists():
+        print("⚠️  tokenizer.json not found — run: python src/tokenizer/train_tokenizer.py")
+    else:
+        from transformers import PreTrainedTokenizerFast
+
+        hf_tokenizer = PreTrainedTokenizerFast(
+            tokenizer_file=str(tok_json),
+            bos_token="<BOS>",
+            eos_token="<EOS>",
+            pad_token="<PAD>",
+            unk_token="<UNK>",
+        )
+        hf_tokenizer.save_pretrained(str(output_dir))
+        print("✅ Saved HF tokenizer (PreTrainedTokenizerFast)")
+
+        # save_pretrained writes tokenizer_config.json with model_max_length=1e30 — fix it
+        tc_path = output_dir / "tokenizer_config.json"
+        with open(tc_path) as f:
+            tc = json.load(f)
+        tc["model_max_length"] = config_data["model"]["max_seq_len"]
+        tc["tokenizer_class"]  = "PreTrainedTokenizerFast"
+        with open(tc_path, "w") as f:
+            json.dump(tc, f, indent=2)
+        print("✅ Patched tokenizer_config.json (model_max_length, tokenizer_class)")
+
+    print("\n🎉 Export complete! Folder 'hf_export' is ready for upload.")
+    print(f"   Files: {sorted(p.name for p in output_dir.iterdir())}")
 
 if __name__ == "__main__":
     export_to_hf()

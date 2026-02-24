@@ -42,7 +42,7 @@ def load_model(
         model_path = project_root / "model_final.pth"
 
     device = get_device(config.training.device)
-    tokenizer = Tokenizer(project_root / "src/tokenizer/vocab.json")
+    tokenizer = Tokenizer(project_root / "src/tokenizer/tokenizer.json")
 
     checkpoint = torch.load(model_path, map_location=device, weights_only=True)
 

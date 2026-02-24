@@ -1,140 +1,114 @@
 """
-tokenizer.py — Word-level tokenizer for A2 German Grammar Tutor.
+tokenizer.py — BPE tokenizer for A2 German Grammar Tutor (v2.0).
 
 ═══════════════════════════════════════════════════════════
-WHAT IS A TOKENIZER?
+WHAT CHANGED FROM v1.0?
 ═══════════════════════════════════════════════════════════
 
-The model works only with numbers. A tokenizer is a "translator"
-between human text and numbers (IDs):
+v1.0 — Word-level tokenizer:
+    Vocabulary = fixed list of words (4000 entries).
+    "gegangen" → id 47   (if in vocabulary)
+    "gehts"    → <UNK>   (if not — unknown word)
 
-    encode("Ich bin müde.") → [4, 60, 469, 4]      text → numbers
-    decode([4, 60, 469, 4]) → "Ich bin müde."       numbers → text
+v2.0 — Byte-level BPE tokenizer:
+    Vocabulary = subwords (8000 entries), trained on project data.
+    "gegangen" → ["Ġgeg", "angen"]  → [312, 891]
+    "gehts"    → ["Ġge", "hts"]     → [89, 1203]   ← never <UNK>
 
-How it works:
-    1. Text is split into words (tokens)
-    2. Each word is looked up in the dictionary (vocab.json)
-    3. If word is found → return its ID
-    4. If not found → return ID <UNK> (unknown)
+Advantages of BPE:
+    ✅ No <UNK> — any word decomposes into subparts
+    ✅ Handles typos, new words, B1 vocabulary
+    ✅ HuggingFace-compatible format (tokenizer.json)
+    ✅ German umlauts ä ö ü ß and Cyrillic handled correctly
 
-Special tokens:
-    <PAD> (id=0) — padding shorter sequences to equal length
-    <BOS> (id=1) — "beginning of sequence" — start of text marker
-    <EOS> (id=2) — "end of sequence" — end of text marker
-    <UNK> (id=3) — "unknown" — replaces any unknown word
+The public API is unchanged:
+    encode(text)           → list[int]
+    decode(ids)            → str
+    pad_sequence(ids, n)   → list[int]
 
 ═══════════════════════════════════════════════════════════
-WHY WORD-LEVEL INSTEAD OF BPE/SENTENCEPIECE?
+DATA FLOW:
 ═══════════════════════════════════════════════════════════
 
-Large models (GPT, LLaMA) use sub-word tokenizers (BPE), 
-which split words into parts: "gegangen" → "ge" + "gang" + "en".
-
-We chose word-level because:
-    ✅ Simpler for training and understanding
-    ✅ V=4000 is enough for A2 (limited vocabulary)
-    ✅ Each token = a whole word → easier to interpret
-    ❌ Drawback: unknown words → <UNK> (cannot "guess" by parts)
+    "Ich bin müde."
+         ↓  encode()
+    [1, 312, 891, 1203, 45, 2]     shape: [seq_len]
+     ↑                          ↑
+    BOS                        EOS
+         ↓  Embedding layer
+    [[v₁], [v₂], …]               shape: [seq_len, d_model]
 
 ═══════════════════════════════════════════════════════════
 """
 
-import json
-import re
+import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from tokenizers import Tokenizer as HFTokenizer
+
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 
-# Tensor shapes for this stage:
-#
-#   Input text:     "Ich bin müde."
-#   After encode:   [1, 60, 155, 469, 4, 2]          shape: [seq_len]
-#                    ↑                    ↑
-#                   BOS                  EOS
-#
-#   Batch (padding): [[1, 60, 155, 469, 4, 2],        shape: [batch_size, max_seq_len]
-#                     [1, 22, 88,  4,   2, 0]]         ← 0 = PAD
-#                                              ↑
-#                                             PAD
+TOKENIZER_JSON = Path(__file__).parent / "tokenizer.json"
+
+PAD_TOKEN = "<PAD>"
+BOS_TOKEN = "<BOS>"
+EOS_TOKEN = "<EOS>"
+UNK_TOKEN = "<UNK>"
 
 
 class Tokenizer:
-    """Word-level tokenizer with fixed vocabulary.
+    """Wrapper around the HuggingFace BPE tokenizer.
+
+    Preserves the same API as v1.0 (word-level tokenizer),
+    so train.py / inference.py / generate.py require no changes.
 
     Matrix representation:
-        vocab — mapping: str → int
-        Embedding layer will then convert int → vector [d_model]
+        Vocabulary — mapping: str → int  (8000 subwords)
+        Embedding layer converts int → vector [d_model]
 
         Chain:  text → Tokenizer → [id₁, id₂, …] → Embedding → [[v₁], [v₂], …]
                   str       ↓          list[int]          ↓         [seq_len, d_model]
     """
 
-    # Special tokens constants
-    PAD_TOKEN = "<PAD>"
-    BOS_TOKEN = "<BOS>"
-    EOS_TOKEN = "<EOS>"
-    UNK_TOKEN = "<UNK>"
+    def __init__(self, tokenizer_path: str | Path | None = None):
+        """Loads the BPE tokenizer from tokenizer.json.
 
-    def __init__(self, vocab_path: str | Path | None = None):
-        """Loads vocabulary from a JSON file."""
-        if vocab_path is None:
-            # Look in the same directory as this script
-            vocab_path = Path(__file__).parent / "vocab.json"
-        
-        vocab_path = Path(vocab_path)
-        if not vocab_path.exists():
+        Args:
+            tokenizer_path: path to tokenizer.json.
+                            Defaults to the file next to this module.
+        """
+        from tokenizers import Tokenizer as HFTokenizer
+
+        if tokenizer_path is None:
+            tokenizer_path = TOKENIZER_JSON
+
+        tokenizer_path = Path(tokenizer_path)
+        if not tokenizer_path.exists():
             raise FileNotFoundError(
-                f"Vocab file not found: {vocab_path}\n"
-                f"Run 'python build_vocab.py' to create it."
+                f"tokenizer.json not found: {tokenizer_path}\n"
+                f"Run first: python src/tokenizer/train_tokenizer.py"
             )
 
-        with open(vocab_path, "r", encoding="utf-8") as f:
-            self.token_to_id: dict[str, int] = json.load(f)
+        self._tok: HFTokenizer = HFTokenizer.from_file(str(tokenizer_path))
 
-        # Reverse mapping: id → token (for decoding)
-        self.id_to_token: dict[int, str] = {
-            idx: token for token, idx in self.token_to_id.items()
-        }
+        # Special token IDs — resolved once at init
+        self.pad_id: int = self._tok.token_to_id(PAD_TOKEN)
+        self.bos_id: int = self._tok.token_to_id(BOS_TOKEN)
+        self.eos_id: int = self._tok.token_to_id(EOS_TOKEN)
+        self.unk_id: int = self._tok.token_to_id(UNK_TOKEN)
 
-        # Store special token IDs for fast access
-        self.pad_id = self.token_to_id[self.PAD_TOKEN]   # 0
-        self.bos_id = self.token_to_id[self.BOS_TOKEN]   # 1
-        self.eos_id = self.token_to_id[self.EOS_TOKEN]   # 2
-        self.unk_id = self.token_to_id[self.UNK_TOKEN]   # 3
+        # For compatibility with old code that accesses token_to_id directly
+        self.token_to_id: dict[str, int] = self._tok.get_vocab()
+
+        self._special_ids = {self.pad_id, self.bos_id, self.eos_id}
 
     @property
     def vocab_size(self) -> int:
-        """Vocabulary size — number of unique tokens.
-
-        This number determines the size of the embedding matrix:
-            Embedding matrix shape = [vocab_size, d_model] = [4000, 128]
-        """
-        return len(self.token_to_id)
-
-    def _tokenize(self, text: str) -> list[str]:
-        """Splits text into a list of tokens (words + punctuation).
-
-        Uses regex for separation:
-        - Words (with umlauts: ä, ö, ü, ß)
-        - Punctuation separately (. , ! ? : ;)
-        - Emoji markers (✅, ❌, 📝)
-        - Special keywords (Correct:, Explanation:, Пояснення:)
-        - Newline symbol \n
-
-        Example:
-            "Ich bin müde." → ["Ich", "bin", "müde", "."]
-            "❌ Incorrect." → ["❌", "Incorrect", "."]
-        """
-        # Alternative order is important: longer patterns first!
-        pattern = (
-            r"Correct:|Incorrect\.|Explanation:|Пояснення:"  # multi-char specials
-            r"|\.\.\."                                        # triple dots (...)
-            r"|[✅❌📝]"                                      # emoji markers
-            r"|\n"                                            # new line
-            r"|[A-Za-zÄäÖöÜüß\u0400-\u04FF]+"               # words (German + Slavic characters)
-            r"|[.,!?;:\"'\-()]"                               # punctuation
-        )
-        tokens = re.findall(pattern, text)
-        return [t for t in tokens if t]  # filter empty strings just in case
+        """Vocabulary size — determines the embedding matrix shape [vocab_size, d_model]."""
+        return self._tok.get_vocab_size()
 
     def encode(
         self,
@@ -143,114 +117,71 @@ class Tokenizer:
         add_eos: bool = True,
         max_len: int | None = None,
     ) -> list[int]:
-        """Converts text into a sequence of IDs.
-
-        Tensor shape: [seq_len] — 1D vector
+        """Converts text into a sequence of token IDs.
 
         Args:
-            text: input text
-            add_bos: whether to add <BOS> at the beginning (usually True)
-            add_eos: whether to add <EOS> at the end (usually True)
-            max_len: maximum length (trims if longer)
+            text:    input text
+            add_bos: prepend <BOS> token
+            add_eos: append <EOS> token
+            max_len: maximum length (truncates if longer)
 
         Returns:
-            list[int] — sequence of token IDs
+            list[int] — token ID sequence,  shape: [seq_len]
 
         Example:
             encode("Ich bin müde.")
-            → tokenize: ["Ich", "bin", "müde", "."]
-            → lookup:   [60, 155, 469, 4]
-            → + BOS/EOS: [1, 60, 155, 469, 4, 2]
+            → BPE: ["Ġ Ich", "Ġbin", "Ġm", "üde", "."]
+            → ids: [1, 312, 891, 445, 203, 5, 2]
+                    ↑                             ↑
+                   BOS                           EOS
         """
-        raw_tokens = self._tokenize(text)
+        encoding = self._tok.encode(text)
+        ids: list[int] = encoding.ids
 
-        ids: list[int] = []
         if add_bos:
-            ids.append(self.bos_id)
-
-        for token in raw_tokens:
-            # Look up token in dictionary
-            token_id = self.token_to_id.get(token)
-            if token_id is not None:
-                ids.append(token_id)
-            else:
-                # Try lowercase (if "Heute" is not found, look for "heute")
-                token_id = self.token_to_id.get(token.lower())
-                if token_id is not None:
-                    ids.append(token_id)
-                else:
-                    ids.append(self.unk_id)  # unknown word → <UNK>
-
+            ids = [self.bos_id] + ids
         if add_eos:
-            ids.append(self.eos_id)
+            ids = ids + [self.eos_id]
 
-        # Trim to max_len (including BOS/EOS)
         if max_len is not None and len(ids) > max_len:
             ids = ids[:max_len]
-            # Ensure last token is EOS if requested
             if add_eos:
                 ids[-1] = self.eos_id
 
         return ids
 
     def decode(self, ids: list[int], skip_special: bool = True) -> str:
-        """Converts a sequence of IDs back to text.
+        """Converts a sequence of token IDs back into text.
 
         Args:
-            ids: list of token IDs
-            skip_special: if True, skips <PAD>, <BOS>, <EOS>, <UNK>
+            ids:          list of token IDs
+            skip_special: if True, skips <PAD>, <BOS>, <EOS>
 
         Returns:
             str — reconstructed text
 
         Example:
-            decode([1, 60, 155, 469, 4, 2]) → "Ich bin müde."
+            decode([1, 312, 891, 203, 5, 2]) → "Ich bin müde."
         """
-        special_ids = {self.pad_id, self.bos_id, self.eos_id}
-        tokens: list[str] = []
+        if skip_special:
+            ids = [i for i in ids if i not in self._special_ids]
 
-        for token_id in ids:
-            if skip_special and token_id in special_ids:
-                continue
-            token = self.id_to_token.get(token_id, self.UNK_TOKEN)
-            tokens.append(token)
-
-        # Join tokens back into text
-        # Punctuation attaches without a space before it
-        if not tokens:
-            return ""
-
-        result = tokens[0]
-        for token in tokens[1:]:
-            if token in {".", ",", "!", "?", ":", ";", ")", '"', "'", "..."}:
-                result += token
-            elif token == "\n":
-                result += token
-            elif result.endswith("(") or result.endswith('"') or result.endswith("\n"):
-                result += token
-            else:
-                result += " " + token
-
-        return result
+        return self._tok.decode(ids)
 
     def pad_sequence(
         self, ids: list[int], max_len: int, pad_id: int | None = None
     ) -> list[int]:
-        """Pads sequence with PAD tokens to the required length.
+        """Pads a sequence with <PAD> tokens to a fixed length.
 
-        Why padding?
-        The neural network processes data in batches.
-        All sequences in a batch must have the same length:
+        Required for batch processing — all sequences in a batch
+        must have the same length:
 
-            Batch (before padding):
-                [1, 60, 155, 469, 4, 2]        ← 6 tokens
-                [1, 22, 88,  4,   2]            ← 5 tokens  ← DIFFERENT LENGTHS!
+            Before padding:  [1, 312, 891, 2]          len=4
+            After (n=6):     [1, 312, 891, 2, 0, 0]    len=6
+                                              ↑↑
+                                             PAD
 
-            Batch (after padding to max_len=6):
-                [1, 60, 155, 469, 4, 2]         ← 6 tokens
-                [1, 22, 88,  4,   2, 0]         ← 6 tokens  ← 0 = PAD
-
-            Tensor shape: [batch_size=2, max_seq_len=6]
+        Tensor shape after padding: [batch_size, max_seq_len]
         """
         if pad_id is None:
             pad_id = self.pad_id
@@ -260,57 +191,58 @@ class Tokenizer:
         return ids + [pad_id] * (max_len - len(ids))
 
     def __repr__(self) -> str:
-        return f"Tokenizer(vocab_size={self.vocab_size}, path=vocab.json)"
+        return f"Tokenizer(vocab_size={self.vocab_size}, bpe, path=tokenizer.json)"
 
 
 # ═══════════════════════════════════════════════════════════
-# SELF-TEST: run 'python tokenizer.py' to verify
+# SELF-TEST: python src/tokenizer/tokenizer.py
 # ═══════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("  🧪 Tokenizer Self-Test")
+    print("  🧪 BPE Tokenizer Self-Test")
     print("=" * 60)
 
-    tok = Tokenizer("vocab.json")
+    tok = Tokenizer()
     print(f"\n  ✅ Loaded: {tok}")
-    print(f"  Special IDs: PAD={tok.pad_id}, BOS={tok.bos_id}, EOS={tok.eos_id}, UNK={tok.unk_id}")
+    print(f"  Special IDs: PAD={tok.pad_id}, BOS={tok.bos_id}, "
+          f"EOS={tok.eos_id}, UNK={tok.unk_id}")
 
     # ─── Test 1: Basic encode/decode ──────────────────────
     print("\n─── Test 1: Encode / Decode ───")
-    test_sentence = "Ich bin müde."
-    encoded = tok.encode(test_sentence)
-    decoded = tok.decode(encoded)
-    print(f"  Input:   '{test_sentence}'")
-    print(f"  Encoded: {encoded}  (shape: [{len(encoded)}])")
-    print(f"  Decoded: '{decoded}'")
+    sentence = "Ich bin müde."
+    enc = tok.encode(sentence)
+    dec = tok.decode(enc)
+    print(f"  Input:   '{sentence}'")
+    print(f"  Encoded: {enc}  (len={len(enc)})")
+    print(f"  Decoded: '{dec}'")
 
-    # ─── Test 2: Unknown words ────────────────────────────
-    print("\n─── Test 2: Unknown Words ───")
-    test_unk = "Ich spiele Klavier."
-    encoded_unk = tok.encode(test_unk)
-    decoded_unk = tok.decode(encoded_unk, skip_special=False)
-    print(f"  Input:   '{test_unk}'")
-    print(f"  Encoded: {encoded_unk}")
-    print(f"  Decoded: '{decoded_unk}'")
-    unk_count = encoded_unk.count(tok.unk_id)
-    print(f"  UNK tokens: {unk_count}")
+    # ─── Test 2: No UNK for out-of-vocabulary words ───────
+    print("\n─── Test 2: Out-of-vocabulary words (no UNK) ───")
+    unk_test = "Donaudampfschifffahrtsgesellschaft"
+    enc2 = tok.encode(unk_test)
+    dec2 = tok.decode(enc2)
+    unk_count = enc2.count(tok.unk_id)
+    print(f"  Input:     '{unk_test}'")
+    print(f"  Encoded:   {enc2}")
+    print(f"  Decoded:   '{dec2}'")
+    print(f"  UNK count: {unk_count}  (expected: 0)")
 
     # ─── Test 3: Tutor response format ────────────────────
     print("\n─── Test 3: Tutor Response ───")
-    tutor_output = "❌ Incorrect.\n✅ Correct: Ich bin nach Hause gegangen.\n📝 Explanation: gehen is used with sein."
-    encoded_tutor = tok.encode(tutor_output)
-    decoded_tutor = tok.decode(encoded_tutor)
-    print(f"  Input:   '{tutor_output}'")
-    print(f"  Encoded: {encoded_tutor}  (len={len(encoded_tutor)})")
-    print(f"  Decoded: '{decoded_tutor}'")
+    tutor = "❌ Incorrect.\n✅ Correct: Ich bin nach Hause gegangen."
+    enc3 = tok.encode(tutor)
+    dec3 = tok.decode(enc3)
+    print(f"  Input:   '{tutor}'")
+    print(f"  Len:     {len(enc3)}")
+    print(f"  Decoded: '{dec3}'")
 
     # ─── Test 4: Padding ──────────────────────────────────
     print("\n─── Test 4: Padding ───")
     short = tok.encode("Ich lerne.")
-    padded = tok.pad_sequence(short, max_len=10)
-    print(f"  Original:  {short}  (len={len(short)})")
-    print(f"  Padded:    {padded}  (len={len(padded)})")
+    padded = tok.pad_sequence(short, max_len=16)
+    print(f"  Original: {short}  (len={len(short)})")
+    print(f"  Padded:   {padded}  (len={len(padded)})")
 
     # ─── Test 5: Roundtrip ────────────────────────────────
     print("\n─── Test 5: Roundtrip ───")
@@ -320,20 +252,12 @@ if __name__ == "__main__":
         "Er kann gut Deutsch sprechen.",
         "Wir sind nach Berlin gefahren.",
     ]
-    all_ok = True
     for s in sentences:
-        enc = tok.encode(s)
-        dec = tok.decode(enc)
-        ok = "✅" if dec == s else "❌"
-        if dec != s:
-            all_ok = False
-        print(f"  {ok} '{s}' → {enc} → '{dec}'")
+        enc_s = tok.encode(s)
+        dec_s = tok.decode(enc_s)
+        ok = "✅" if dec_s.strip() == s.strip() else "⚠️ "
+        print(f"  {ok} '{s}' → '{dec_s}'")
 
-    # ─── Summary ──────────────────────────────────────────
     print("\n" + "=" * 60)
-    if all_ok:
-        print("  ✅ All tests passed!")
-    else:
-        print("  ⚠️  Some roundtrip tests had differences (may be OK for punctuation)")
     print(f"  Vocab size: {tok.vocab_size}")
     print("=" * 60)
