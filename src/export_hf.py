@@ -58,10 +58,9 @@ def export_to_hf(model_path=None, config_path=None, output_dir=None):
     # 3. Copy model source files
     src = _PROJECT_ROOT / "src"
     shutil.copy(src / "model/model.py",                 output_dir / "model.py")
-    shutil.copy(src / "model/modeling_custom.py",       output_dir / "modeling_custom.py")
-    shutil.copy(src / "model/configuration_custom.py",  output_dir / "configuration_custom.py")
-    shutil.copy(src / "tokenizer/tokenizer.py",         output_dir / "tokenizer.py")
-    print("✅ Copied model source files")
+    # We no longer need modeling_custom.py or configuration_custom.py 
+    # as we are now a native 'gpt2' model type.
+    print("✅ Copied model.py (source reference)")
 
     # 4. Save HuggingFace-compatible tokenizer (PreTrainedTokenizerFast)
     #    This makes the tokenizer recognized as GPT-2 style on the HF Hub.
