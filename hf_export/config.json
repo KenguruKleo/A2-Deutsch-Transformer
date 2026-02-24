@@ -41,5 +41,5 @@
   "tie_word_embeddings": true,
   "transformers_version": "5.2.0",
   "use_cache": true,
-  "vocab_size": 8000
+  "vocab_size": 8003
 }
