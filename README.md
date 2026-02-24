@@ -97,7 +97,9 @@ A2-Deutsch-Transformer/
 ## How It Works
 
 ### 1. `train_tokenizer.py`
-Trains a **Byte-level BPE** tokenizer on the project data. It reads all `input`/`output` fields from `train.jsonl` + `val.jsonl` and extracts text from the `Begegnungen_A2.pdf` textbook. The result is a `tokenizer.json` file with 8000 subword tokens — compatible with HuggingFace `PreTrainedTokenizerFast`. Unlike the old word-level vocab, BPE never produces `<UNK>`: any unknown word is split into known subparts.
+Trains a **Byte-level BPE** tokenizer on the project data. Reads all `input`/`output` fields from `train.jsonl` + `val.jsonl` and extracts text from the `Begegnungen_A2.pdf` textbook. The result is a `tokenizer.json` file with 8000 subword tokens — compatible with HuggingFace `PreTrainedTokenizerFast`. Unlike the old word-level vocab, BPE never produces `<UNK>`: any unknown word is split into known subparts.
+
+To measure tokenizer quality after training: `python scripts/eval_tokenizer.py` — see **[Tokenizer Metrics](docs/tokenizer_metrics.md)** for full description of fertility, UNK rate, continuation rate, and sequence length metrics.
 
 ### 2. `generator.py`
 Generates thousands of training examples. It knows grammar rules, takes a correct sentence and intentionally "breaks" it (e.g., changes word order or auxiliary verb), adding an explanation of why it is an error.

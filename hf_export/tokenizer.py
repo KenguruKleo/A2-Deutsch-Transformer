@@ -1,33 +1,33 @@
 """
-tokenizer.py — BPE токенізатор для A2 German Grammar Tutor (v2.0).
+tokenizer.py — BPE tokenizer for A2 German Grammar Tutor (v2.0).
 
 ═══════════════════════════════════════════════════════════
-ЩО ЗМІНИЛОСЬ ВІДНОСНО v1.0?
+WHAT CHANGED FROM v1.0?
 ═══════════════════════════════════════════════════════════
 
-v1.0 — Word-level токенізатор:
-    Словник = список конкретних слів (4000 штук).
-    "gegangen" → id 47   (якщо є в словнику)
-    "gehts"    → <UNK>   (якщо немає — невідоме слово)
+v1.0 — Word-level tokenizer:
+    Vocabulary = fixed list of words (4000 entries).
+    "gegangen" → id 47   (if in vocabulary)
+    "gehts"    → <UNK>   (if not — unknown word)
 
-v2.0 — Byte-level BPE токенізатор:
-    Словник = підслова (8000 штук), натренований на даних.
-    "gegangen" → ["▁geg", "angen"]  → [312, 891]
-    "gehts"    → ["▁ge", "hts"]     → [89, 1203]   ← ніколи не дає <UNK>
+v2.0 — Byte-level BPE tokenizer:
+    Vocabulary = subwords (8000 entries), trained on project data.
+    "gegangen" → ["Ġgeg", "angen"]  → [312, 891]
+    "gehts"    → ["Ġge", "hts"]     → [89, 1203]   ← never <UNK>
 
-Переваги BPE:
-    ✅ Ніяких <UNK> — будь-яке слово розкладається на підчастини
-    ✅ Обробляє опечатки, нові слова, B1 словник
-    ✅ HuggingFace-сумісний формат (tokenizer.json)
-    ✅ Умлаути ä ö ü ß та кирилиця обробляються коректно
+Advantages of BPE:
+    ✅ No <UNK> — any word decomposes into subparts
+    ✅ Handles typos, new words, B1 vocabulary
+    ✅ HuggingFace-compatible format (tokenizer.json)
+    ✅ German umlauts ä ö ü ß and Cyrillic handled correctly
 
-API залишається тим самим:
+The public API is unchanged:
     encode(text)           → list[int]
     decode(ids)            → str
     pad_sequence(ids, n)   → list[int]
 
 ═══════════════════════════════════════════════════════════
-ЯК ЧИТАТИ CHAIN ПЕРЕТВОРЕНЬ:
+DATA FLOW:
 ═══════════════════════════════════════════════════════════
 
     "Ich bin müde."
@@ -60,25 +60,25 @@ UNK_TOKEN = "<UNK>"
 
 
 class Tokenizer:
-    """Wrapper над HuggingFace BPE токенізатором.
+    """Wrapper around the HuggingFace BPE tokenizer.
 
-    Зберігає той самий API що був у v1.0 (word-level),
-    тому train.py / inference.py / generate.py не потребують змін.
+    Preserves the same API as v1.0 (word-level tokenizer),
+    so train.py / inference.py / generate.py require no changes.
 
     Matrix representation:
-        Словник — mapping: str → int  (8000 підслів)
-        Embedding layer конвертує int → вектор [d_model]
+        Vocabulary — mapping: str → int  (8000 subwords)
+        Embedding layer converts int → vector [d_model]
 
         Chain:  text → Tokenizer → [id₁, id₂, …] → Embedding → [[v₁], [v₂], …]
                   str       ↓          list[int]          ↓         [seq_len, d_model]
     """
 
     def __init__(self, tokenizer_path: str | Path | None = None):
-        """Завантажує BPE токенізатор з tokenizer.json.
+        """Loads the BPE tokenizer from tokenizer.json.
 
         Args:
-            tokenizer_path: шлях до tokenizer.json.
-                            За замовчуванням — поруч з цим файлом.
+            tokenizer_path: path to tokenizer.json.
+                            Defaults to the file next to this module.
         """
         from tokenizers import Tokenizer as HFTokenizer
 
@@ -88,26 +88,26 @@ class Tokenizer:
         tokenizer_path = Path(tokenizer_path)
         if not tokenizer_path.exists():
             raise FileNotFoundError(
-                f"tokenizer.json не знайдено: {tokenizer_path}\n"
-                f"Запусти спочатку: python src/tokenizer/train_tokenizer.py"
+                f"tokenizer.json not found: {tokenizer_path}\n"
+                f"Run first: python src/tokenizer/train_tokenizer.py"
             )
 
         self._tok: HFTokenizer = HFTokenizer.from_file(str(tokenizer_path))
 
-        # Спеціальні токени — отримуємо їх id один раз
+        # Special token IDs — resolved once at init
         self.pad_id: int = self._tok.token_to_id(PAD_TOKEN)
         self.bos_id: int = self._tok.token_to_id(BOS_TOKEN)
         self.eos_id: int = self._tok.token_to_id(EOS_TOKEN)
         self.unk_id: int = self._tok.token_to_id(UNK_TOKEN)
 
-        # Для сумісності зі старим кодом (train.py використовує token_to_id.get)
+        # For compatibility with old code that accesses token_to_id directly
         self.token_to_id: dict[str, int] = self._tok.get_vocab()
 
         self._special_ids = {self.pad_id, self.bos_id, self.eos_id}
 
     @property
     def vocab_size(self) -> int:
-        """Розмір словника — визначає розмір embedding матриці [vocab_size, d_model]."""
+        """Vocabulary size — determines the embedding matrix shape [vocab_size, d_model]."""
         return self._tok.get_vocab_size()
 
     def encode(
@@ -117,26 +117,24 @@ class Tokenizer:
         add_eos: bool = True,
         max_len: int | None = None,
     ) -> list[int]:
-        """Конвертує текст у послідовність id.
+        """Converts text into a sequence of token IDs.
 
         Args:
-            text:    вхідний текст
-            add_bos: додати <BOS> на початку
-            add_eos: додати <EOS> в кінці
-            max_len: максимальна довжина (обрізає якщо довше)
+            text:    input text
+            add_bos: prepend <BOS> token
+            add_eos: append <EOS> token
+            max_len: maximum length (truncates if longer)
 
         Returns:
-            list[int] — послідовність token id  shape: [seq_len]
+            list[int] — token ID sequence,  shape: [seq_len]
 
         Example:
             encode("Ich bin müde.")
-            → BPE: ["▁Ich", "▁bin", "▁m", "üde", "."]
+            → BPE: ["Ġ Ich", "Ġbin", "Ġm", "üde", "."]
             → ids: [1, 312, 891, 445, 203, 5, 2]
                     ↑                             ↑
                    BOS                           EOS
         """
-        # Вимикаємо автоматичне додавання special tokens у HF tokenizer
-        # — керуємо цим вручну для сумісності зі старим API
         encoding = self._tok.encode(text)
         ids: list[int] = encoding.ids
 
@@ -153,14 +151,14 @@ class Tokenizer:
         return ids
 
     def decode(self, ids: list[int], skip_special: bool = True) -> str:
-        """Конвертує послідовність id назад у текст.
+        """Converts a sequence of token IDs back into text.
 
         Args:
-            ids:          список token id
-            skip_special: якщо True — пропускає <PAD>, <BOS>, <EOS>
+            ids:          list of token IDs
+            skip_special: if True, skips <PAD>, <BOS>, <EOS>
 
         Returns:
-            str — відновлений текст
+            str — reconstructed text
 
         Example:
             decode([1, 312, 891, 203, 5, 2]) → "Ich bin müde."
@@ -173,17 +171,17 @@ class Tokenizer:
     def pad_sequence(
         self, ids: list[int], max_len: int, pad_id: int | None = None
     ) -> list[int]:
-        """Доповнює послідовність токенами <PAD> до потрібної довжини.
+        """Pads a sequence with <PAD> tokens to a fixed length.
 
-        Потрібно для батч-обробки — всі послідовності в батчі
-        мають бути однакової довжини:
+        Required for batch processing — all sequences in a batch
+        must have the same length:
 
-            До padding:   [1, 312, 891, 2]          len=4
-            Після (n=6):  [1, 312, 891, 2, 0, 0]    len=6
-                                            ↑↑
-                                           PAD
+            Before padding:  [1, 312, 891, 2]          len=4
+            After (n=6):     [1, 312, 891, 2, 0, 0]    len=6
+                                              ↑↑
+                                             PAD
 
-        Tensor shape після padding: [batch_size, max_seq_len]
+        Tensor shape after padding: [batch_size, max_seq_len]
         """
         if pad_id is None:
             pad_id = self.pad_id
@@ -219,7 +217,7 @@ if __name__ == "__main__":
     print(f"  Encoded: {enc}  (len={len(enc)})")
     print(f"  Decoded: '{dec}'")
 
-    # ─── Test 2: Нові слова — не дає <UNK> ───────────────
+    # ─── Test 2: No UNK for out-of-vocabulary words ───────
     print("\n─── Test 2: Out-of-vocabulary words (no UNK) ───")
     unk_test = "Donaudampfschifffahrtsgesellschaft"
     enc2 = tok.encode(unk_test)
@@ -228,9 +226,9 @@ if __name__ == "__main__":
     print(f"  Input:     '{unk_test}'")
     print(f"  Encoded:   {enc2}")
     print(f"  Decoded:   '{dec2}'")
-    print(f"  UNK count: {unk_count}  (має бути 0)")
+    print(f"  UNK count: {unk_count}  (expected: 0)")
 
-    # ─── Test 3: Tutor response ───────────────────────────
+    # ─── Test 3: Tutor response format ────────────────────
     print("\n─── Test 3: Tutor Response ───")
     tutor = "❌ Incorrect.\n✅ Correct: Ich bin nach Hause gegangen."
     enc3 = tok.encode(tutor)

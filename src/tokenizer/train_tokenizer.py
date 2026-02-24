@@ -1,17 +1,17 @@
 """
-train_tokenizer.py — Тренує BPE токенізатор на даних проекту.
+train_tokenizer.py — Trains a Byte-level BPE tokenizer on project data.
 
-Джерела тексту:
-  1. data/train.jsonl + data/val.jsonl  — input і output поля
-  2. data_raw/Begegnungen_А2.pdf        — текст підручника (якщо є PyMuPDF)
+Text sources:
+  1. data/train.jsonl + data/val.jsonl  — input and output fields
+  2. data_raw/Begegnungen_А2.pdf        — textbook text (requires PyMuPDF)
 
-Результат:
-  src/tokenizer/tokenizer.json  — HF-сумісний BPE токенізатор
+Output:
+  src/tokenizer/tokenizer.json  — HuggingFace-compatible BPE tokenizer
 
-Запуск (після генерації даних):
+Usage (after generating data):
   python src/tokenizer/train_tokenizer.py
 
-Або автоматично з generator.py — він викликає train() після генерації.
+Also called automatically by generator.py after data generation.
 """
 
 import json
@@ -31,14 +31,14 @@ SPECIAL_TOKENS = ["<PAD>", "<BOS>", "<EOS>", "<UNK>"]
 
 
 # ---------------------------------------------------------------------------
-# Збираємо текст з усіх джерел
+# Text collection
 # ---------------------------------------------------------------------------
 
 def _iter_jsonl() -> list[str]:
     texts: list[str] = []
     for path in [TRAIN_JSONL, VAL_JSONL]:
         if not path.exists():
-            print(f"  ⚠️  {path.name} не знайдено — пропускаємо")
+            print(f"  ⚠️  {path.name} not found — skipping")
             continue
         print(f"  📄 {path.name}...")
         with open(path, encoding="utf-8") as f:
@@ -54,12 +54,12 @@ def _iter_jsonl() -> list[str]:
 
 def _iter_pdf() -> list[str]:
     if not PDF_PATH.exists():
-        print(f"  ⚠️  PDF не знайдено ({PDF_PATH.name}) — пропускаємо")
+        print(f"  ⚠️  PDF not found ({PDF_PATH.name}) — skipping")
         return []
     try:
         import fitz
     except ImportError:
-        print("  ⚠️  PyMuPDF не встановлений (pip install pymupdf) — пропускаємо PDF")
+        print("  ⚠️  PyMuPDF not installed (pip install pymupdf) — skipping PDF")
         return []
 
     print(f"  📚 {PDF_PATH.name}...")
@@ -75,43 +75,43 @@ def _iter_pdf() -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# Тренування
+# Training
 # ---------------------------------------------------------------------------
 
 def train() -> None:
     from tokenizers import Tokenizer, models, trainers, pre_tokenizers, decoders
 
-    print("\n🚀 Тренуємо BPE токенізатор")
+    print("\n🚀 Training BPE tokenizer")
     print(f"   vocab_size : {VOCAB_SIZE}")
     print(f"   output     : {OUTPUT_PATH}\n")
 
     tokenizer = Tokenizer(models.BPE(unk_token="<UNK>"))
 
-    # ByteLevel — обробляє будь-який Unicode через байти (як GPT-2)
-    # Ніяких <UNK> для нових символів — будь-який символ розкладається в байти
+    # ByteLevel — handles any Unicode via bytes (like GPT-2).
+    # No <UNK> for unknown characters — any character decomposes into bytes.
     tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=False)
     tokenizer.decoder       = decoders.ByteLevel()
 
     trainer = trainers.BpeTrainer(
         vocab_size=VOCAB_SIZE,
         special_tokens=SPECIAL_TOKENS,
-        min_frequency=2,       # токен має зустрітись хоча б 2 рази
+        min_frequency=2,       # token must appear at least twice
         show_progress=True,
     )
 
-    print("📂 Збираємо тексти:")
+    print("📂 Collecting texts:")
     texts  = _iter_jsonl()
     texts += _iter_pdf()
-    print(f"\n  📊 Всього рядків: {len(texts):,}")
+    print(f"\n  📊 Total lines: {len(texts):,}")
 
     tokenizer.train_from_iterator(texts, trainer=trainer)
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     tokenizer.save(str(OUTPUT_PATH))
-    print(f"\n✅ Збережено: {OUTPUT_PATH}")
+    print(f"\n✅ Saved: {OUTPUT_PATH}")
 
-    # --- Перевірка ---
-    print("\n🧪 Перевірка:")
+    # --- Verification ---
+    print("\n🧪 Verification:")
     test_cases = [
         "Heute gehe ich ins Kino.",
         "Ich habe nach Berlin gefahren.",
@@ -127,10 +127,10 @@ def train() -> None:
         print(f"  out: {dec[:60]}")
         print()
 
-    print("📌 Спеціальні токени:")
+    print("📌 Special tokens:")
     for tok in SPECIAL_TOKENS:
         print(f"  {tok:8s} → id {tokenizer.token_to_id(tok)}")
-    print(f"\n📦 Vocab size: {tokenizer.get_vocab_size()}")
+    print(f"\n📦 Final vocab size: {tokenizer.get_vocab_size()}")
 
 
 if __name__ == "__main__":
