@@ -45,26 +45,26 @@ For a complete list of examples and model explanations for each topic, see:
 ## Architecture
 
 ```
-Transformer Decoder Only (v1.2) - Native GPT-2 compatible
+Transformer Encoder-Decoder (v2.0) - BART-style architecture
 ├── Tokenizer: Byte-level BPE, 8,000 tokens (HuggingFace tokenizers)
-├── V = 8,000 tokens
+├── V = 8,003 tokens (including extra special tokens like <s>, </s>, <mask_token>)
 ├── T = 64  (max sequence length)
-├── d_model = 128
-├── L = 4 Layers
-├── H = 4 Attention Heads
-├── Weight tying = ON (shared weights between Embeddings and LM Head)
-└── Precision = FP16 → Model size ≈ 11.5 MB (Safetensors)
+├── d_model = 256
+├── Encoder: 3 Layers, 4 Attention Heads
+├── Decoder: 3 Layers, 4 Attention Heads (including Cross-Attention)
+├── d_ff = 512
+├── Weight tying = ON (shared weights between Encoder, Decoder, and LM Head)
+└── Precision = FP32 (Exported as Safetensors)
 
-Detailed mathematical description of all matrix transformations can be found in [docs/architecture.md](docs/architecture.md).
-
-> **v2.0 (upcoming — `next` branch):** Encoder-Decoder + BPE tokenizer → [docs/architecture_v2.md](docs/architecture_v2.md)
+Detailed mathematical description of the v2.0 architecture can be found in [docs/architecture_v2.md](docs/architecture_v2.md).
 ```
 
 ## Release History
 
 *   **v1.0 (Proof of Concept):** Initial release with a basic Transformer Decoder and a word-level vocabulary.
 *   **v1.1 (BPE Tokenizer):** Migration to a Byte-level BPE tokenizer (8,000 tokens) for better handling of unknown words and improved performance.
-*   **v1.2 (Hugging Face Native):** Refactored to be a fully compatible **GPT-2** model. Removed the need for `trust_remote_code=True`, remapped weights for native loading, and enabled the Inference Widget on Hugging Face. Added biases for better compatibility.
+*   **v1.2 (Hugging Face Native):** Refactored to be a fully compatible **GPT-2** model.
+*   **v2.0 (Encoder-Decoder):** Major upgrade to a **BART-style** Encoder-Decoder architecture. Switched to Seq2Seq modeling, significantly improving the quality and logic of grammatical explanations. Optimized for the Hugging Face `text2text-generation` pipeline.
 
 ## Project Structure
 
@@ -254,15 +254,20 @@ Detailed results are written to `tests/eval_results.json`. At the end of each ru
 This model is hosted on the [Hugging Face Hub](https://huggingface.co/kengurukleo/deutsch_a2_transformer). Below are instructions for users and developers.
 
 ### 📥 For Users (Loading the Model)
-You can load and use this model directly in your Python code using the `transformers` library. As of **v1.2**, the model is a native GPT-2 and **does not require** `trust_remote_code=True`.
+You can load and use this model directly in your Python code using the `transformers` library. Since **v2.0**, the model uses a native **BART** (Encoder-Decoder) architecture and works with the `text2text-generation` pipeline.
 
 ```python
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, pipeline
 
 # Load model and tokenizer natively
 model_id = "kengurukleo/deutsch_a2_transformer"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
-model = AutoModelForCausalLM.from_pretrained(model_id)
+model = AutoModelForSeq2SeqLM.from_pretrained(model_id)
+
+# Or use a pipeline
+corrector = pipeline("text2text-generation", model=model, tokenizer=tokenizer)
+result = corrector("Ich habe nach Berlin gefahren.")
+print(result[0]['generated_text'])
 ```
 
 ### 🛠 For Developers (Export and Publish)

@@ -1,9 +1,8 @@
----
 language:
 - de
 - uk
 license: mit
-pipeline_tag: text-generation
+pipeline_tag: text2text-generation
 tags:
 - grammar
 - german
@@ -11,7 +10,8 @@ tags:
 - transformer
 - education
 - pytorch
-- gpt2
+- bart
+- seq2seq
 inference: true
 widget:
 - text: "Ich habe den Auto."
@@ -24,7 +24,7 @@ model-index:
 - name: Deutsch A2 Grammar Transformer
   results:
   - task:
-      type: text-generation
+      type: text2text-generation
       name: Grammar Correction
     metrics:
     - type: accuracy
@@ -34,7 +34,7 @@ model-index:
 
 # Deutsch A2 Grammar Transformer (Ukrainian Explanations)
 
-This is a compact, custom-built Transformer Decoder model designed to identify, correct, and explain German grammar errors at the A1-A2 level. It is specifically tailored for **Ukrainian-speaking learners**, providing detailed grammar feedback and explanations in **Ukrainian**.
+This is a compact, custom-built **BART (Encoder-Decoder)** Transformer model designed to identify, correct, and explain German grammar errors at the A1-A2 level. It is specifically tailored for **Ukrainian-speaking learners**, providing detailed grammar feedback and explanations in **Ukrainian**.
 
 ✨ **Live Demo (Spaces):** [kengurukleo/deutsch-a2-tutor](https://huggingface.co/spaces/kengurukleo/deutsch-a2-tutor)
 
@@ -74,36 +74,37 @@ The model covers over 18 essential grammar topics for A1 and A2 levels.
 | **Präteritum** | A2 | Ich war zu Hause. | Ich waren zu Hause. | ✅ Correct: Ich war zu Hause. <br> 📝 Пояснення: У минулому часі (Präteritum) дієслово 'sein' для 'ich' має форму 'war'. |
 
 ## 🛠 Architecture
-- **Type:** Transformer Decoder (GPT-2 style)
-- **Parameters:** ~5.5M
-- **Layers:** 4
+- **Type:** Transformer Encoder-Decoder (BART-style)
+- **Parameters:** ~12M
+- **Encoder Layers:** 3
+- **Decoder Layers:** 3
 - **Attention Heads:** 4
-- **Embedding Dim:** 128
-- **Tokenizer:** Byte-level BPE (8,000 tokens)
+- **Embedding Dim:** 256
+- **Tokenizer:** Byte-level BPE (8,000 source tokens, 8,003 total)
 
 ## 📖 How to Use
 The model is fully compatible with the standard `transformers` library. No custom code is required.
 
 ```python
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, pipeline
 
 # Load model and tokenizer
 model_id = "kengurukleo/deutsch_a2_transformer"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
-model = AutoModelForCausalLM.from_pretrained(model_id)
+model = AutoModelForSeq2SeqLM.from_pretrained(model_id)
 
-# Test generation
-text = "Ich habe den Auto."
-inputs = tokenizer(text, return_tensors="pt")
-outputs = model.generate(**inputs, max_new_tokens=64)
-print(tokenizer.decode(outputs[0], skip_special_tokens=True))
+# Use pipeline for easy inference
+corrector = pipeline("text2text-generation", model=model, tokenizer=tokenizer)
+result = corrector("Ich habe nach Berlin gefahren.")
+print(result[0]['generated_text'])
 ```
 
 ## 📜 Release History
 
 *   **v1.0 (Proof of Concept):** Initial release with a basic Transformer Decoder and word-level vocabulary.
-*   **v1.1 (BPE Tokenizer):** Migration to a Byte-level BPE tokenizer (8,000 tokens) for better handling of unknown words.
-*   **v1.2 (GPT-2 Native):** Refactored to be a fully compatible **GPT-2** model. Removed `trust_remote_code=True`, remapped weights for native loading, and enabled the Inference Widget.
+*   **v1.1 (BPE Tokenizer):** Migration to a Byte-level BPE tokenizer (8,000 tokens).
+*   **v1.2 (GPT-2 Native):** Refactored to be a fully compatible **GPT-2** model.
+*   **v2.0 (Encoder-Decoder):** Major upgrade to a **BART-style** architecture. Switched to Seq2Seq modeling for superior grammatical logic and explanations.
 
 ## 👨‍💻 Author
 Created by [KenguruKleo](https://github.com/KenguruKleo).
