@@ -45,7 +45,7 @@ def train():
 
     # 3. Init Tokenizer & Model
     project_root = get_project_root()
-    tokenizer = Tokenizer(project_root / "src/tokenizer/vocab.json")
+    tokenizer = Tokenizer(project_root / "src/tokenizer/tokenizer.json")
     
     model = TransformerModel(
         vocab_size=config.model.vocab_size,

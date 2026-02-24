@@ -67,12 +67,14 @@ def export_to_hf(model_path=None, config_path=None, output_dir=None):
     shutil.copy(src / "model/modeling_custom.py", output_dir / "modeling_custom.py")
     shutil.copy(src / "model/configuration_custom.py", output_dir / "configuration_custom.py")
     shutil.copy(src / "tokenizer/tokenizer.py", output_dir / "tokenizer.py")
-    
-    vocab_in = src / "tokenizer/vocab.json"
-    vocab_out = output_dir / "vocab.json"
-    if vocab_in.exists():
-        shutil.copy(vocab_in, vocab_out)
-        print(f"✅ Copied vocab.json to {vocab_out}")
+
+    tok_in = src / "tokenizer/tokenizer.json"
+    tok_out = output_dir / "tokenizer.json"
+    if tok_in.exists():
+        shutil.copy(tok_in, tok_out)
+        print(f"✅ Copied tokenizer.json to {tok_out}")
+    else:
+        print("⚠️  tokenizer.json not found — run: python src/tokenizer/train_tokenizer.py")
 
     print("\n🎉 Custom Model Export complete! Folder 'hf_export' is ready for upload.")
 
