@@ -55,6 +55,8 @@ Transformer Decoder Only
 └── Precision = FP16 → Model size ≈ 2.5 MB
 
 Detailed mathematical description of all matrix transformations can be found in [docs/architecture.md](docs/architecture.md).
+
+> **v2.0 (in progress — `next` branch):** Encoder-Decoder + BPE tokenizer → [docs/architecture_v2.md](docs/architecture_v2.md)
 ```
 
 ## Project Structure
