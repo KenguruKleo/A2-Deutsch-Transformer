@@ -17,21 +17,25 @@ def check_grammar(text: str) -> str:
     if not text.strip():
         return "Будь ласка, введіть німецьке речення."
 
-    prompt_ids = [bos_id] + tokenizer.encode(text, add_special_tokens=False)
-    input_ids = torch.tensor([prompt_ids]).long()
+    # Encode with BOS and get attention_mask
+    inputs = tokenizer(
+        f"{tokenizer.bos_token}{text}", 
+        return_tensors="pt", 
+        add_special_tokens=False
+    )
+    prompt_len = inputs["input_ids"].shape[1]
 
     output_ids = model.generate(
-        input_ids,
+        **inputs,
         max_length=64,
         do_sample=True,
         temperature=0.3,
         top_k=50,
-        eos_token_id=eos_id,
-        pad_token_id=eos_id, # Standard practice for GPT-2 padding
+        pad_token_id=eos_id,
     )
 
-    # Decode only the generated part (after the prompt)
-    generated = output_ids[0].tolist()[len(prompt_ids):]
+    # Decode only the generated part
+    generated = output_ids[0].tolist()[prompt_len:]
     if eos_id in generated:
         generated = generated[:generated.index(eos_id)]
 
