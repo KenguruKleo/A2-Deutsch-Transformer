@@ -48,8 +48,14 @@ def export_to_hf(model_path=None, config_path=None, output_dir=None):
     print(f"📦 Converting {model_path} to safetensors...")
     checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)
     state_dict = checkpoint["model_state_dict"]
-
-    tensors = {k: v.cpu().clone().contiguous() for k, v in state_dict.items()}
+    tensors = {}
+    for k, v in state_dict.items():
+        # Standard GPT-2 in HF uses Conv1D layers which expect transposed weights 
+        # compared to PyTorch's nn.Linear.
+        if any(suffix in k for suffix in [".c_attn.weight", ".c_fc.weight", ".c_proj.weight"]):
+            tensors[k] = v.cpu().transpose(0, 1).contiguous()
+        else:
+            tensors[k] = v.cpu().clone().contiguous()
 
     safetensors_out = output_dir / "model.safetensors"
     save_file(tensors, safetensors_out)

@@ -118,26 +118,26 @@ class TransformerModel(nn.Module):
     def __init__(self, vocab_size: int, max_seq_len: int, d_model: int, n_heads: int, n_layers: int, d_ff: int, weight_tying: bool = True):
         super().__init__()
         
-        # POSITIONAL EMBEDDINGS [1, max_seq_len, d_model]
-        # Using a Parameter so it's a learnable weight
-        wpe = nn.Parameter(torch.zeros(1, max_seq_len, d_model))
+        # POSITIONAL EMBEDDINGS [max_seq_len, d_model]
+        # GPT-2 uses nn.Embedding for wpe
+        wpe = nn.Embedding(max_seq_len, d_model)
 
         # transformer dict-like structure to match GPT2 naming
         self.transformer = nn.ModuleDict({
             # 2. Token Embeddings [vocab_size, d_model]
             "wte": nn.Embedding(vocab_size, d_model),
             
-            # 3. Stacking: Transformer blocks (named 'h' in GPT2)
+            # 3. Positional Embeddings
+            "wpe": wpe,
+            
+            # 4. Stacking: Transformer blocks (named 'h' in GPT2)
             "h": nn.ModuleList([
                 TransformerBlock(d_model, n_heads, d_ff) for _ in range(n_layers)
             ]),
             
-            # 4. Final Norm (named 'ln_f' in GPT2)
+            # 5. Final Norm (named 'ln_f' in GPT2)
             "ln_f": nn.LayerNorm(d_model)
         })
-        
-        # Add wpe to transformer for state_dict consistency (transformer.wpe)
-        self.transformer.register_parameter("wpe", wpe)
         
         # 5. LM Head [d_model, vocab_size]
         self.lm_head = nn.Linear(d_model, vocab_size, bias=False)
@@ -159,8 +159,8 @@ class TransformerModel(nn.Module):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
         
         # If module has wpe (like our TransformerModel), initialize it too
-        if isinstance(module, TransformerModel) and module.transformer.wpe is not None:
-            torch.nn.init.normal_(module.transformer.wpe.data, mean=0.0, std=0.02)
+        # This check is no longer needed as wpe is now a direct nn.Embedding within the ModuleDict
+        # and will be initialized by the nn.Embedding check above.
 
     def _create_causal_mask(self, seq_len, device):
         """
@@ -184,7 +184,9 @@ class TransformerModel(nn.Module):
         tok_emb = self.transformer["wte"](ids)
         
         # 2. Get positional embeddings from transformer.wpe
-        pos_emb = self.transformer.wpe[:, :seq_len, :]
+        # GPT-2 wpe is an Embedding layer
+        pos_ids = torch.arange(seq_len, device=ids.device).unsqueeze(0)
+        pos_emb = self.transformer.wpe(pos_ids)
         
         # 3. Combine token meaning and its position.
         x = tok_emb + pos_emb
