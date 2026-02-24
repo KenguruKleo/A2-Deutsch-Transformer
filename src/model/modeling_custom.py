@@ -1,66 +1,50 @@
+"""
+modeling_custom.py — HuggingFace-compatible wrapper for TransformerModel.
+
+DeutschA2Model inherits PreTrainedModel so the model can be:
+  - loaded via AutoModelForCausalLM.from_pretrained()
+  - used with HuggingFace generate() (or our custom generate override)
+  - exported to safetensors via save_pretrained()
+
+The tokenizer is intentionally NOT part of this class — it lives separately
+as PreTrainedTokenizerFast and is loaded independently by the caller.
+"""
+
 import torch
-import torch.nn as nn
+import torch.nn.functional as F
 from transformers import PreTrainedModel
 from .configuration_custom import DeutschA2Config
 from .model import TransformerModel
-from .tokenizer import Tokenizer
-import os
+
 
 class DeutschA2Model(PreTrainedModel):
     config_class = DeutschA2Config
+
+    # Weight tying: lm_head shares weights with token embedding wte
     _tied_weights_keys = ["model.lm_head.weight"]
 
-    def __init__(self, config):
+    def __init__(self, config: DeutschA2Config):
         super().__init__(config)
-        self.tokenizer = None
-        
+
         self.model = TransformerModel(
             vocab_size=config.vocab_size,
-            max_seq_len=config.max_seq_len,
-            d_model=config.d_model,
-            n_heads=config.n_heads,
-            n_layers=config.n_layers,
-            d_ff=config.d_ff
+            max_seq_len=config.n_positions,   # GPT2Config uses n_positions
+            d_model=config.n_embd,             # GPT2Config uses n_embd
+            n_heads=config.n_head,             # GPT2Config uses n_head
+            n_layers=config.n_layer,           # GPT2Config uses n_layer
+            d_ff=config.n_inner,               # GPT2Config uses n_inner
+            weight_tying=getattr(config, "weight_tying", True),
         )
-        
-        # Robust tokenizer initialization
-        self._init_tokenizer()
-            
+
         self.post_init()
 
-    def _init_tokenizer(self):
-        """Attempts to find and load vocab.json from multiple possible locations."""
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        possible_paths = [
-            os.path.join(current_dir, "vocab.json"),
-            "vocab.json",
-            "/app/vocab.json"
-        ]
-        
-        for path in possible_paths:
-            if os.path.exists(path):
-                try:
-                    self.tokenizer = Tokenizer(path)
-                    print(f"✅ Tokenizer loaded from: {path}")
-                    return
-                except Exception as e:
-                    print(f"⚠️ Failed to load vocab from {path}: {e}")
-
-        # Fallback for Hugging Face Hub/Spaces: try to download if not found locally
-        try:
-            from huggingface_hub import hf_hub_download
-            print("🌐 Attempting to download vocab.json from Hub...")
-            vocab_path = hf_hub_download(repo_id=self.config._name_or_path, filename="vocab.json")
-            self.tokenizer = Tokenizer(vocab_path)
-            print(f"✅ Tokenizer loaded from Hub: {vocab_path}")
-        except Exception as e:
-            print(f"❌ Could not initialize tokenizer: {e}")
+    # ── Embedding tie hooks required by PreTrainedModel ──────────────────────
 
     def get_input_embeddings(self):
-        return self.model.token_emb
+        return self.model.transformer["wte"]
 
     def set_input_embeddings(self, value):
-        self.model.token_emb = value
+        self.model.transformer["wte"] = value
 
     def get_output_embeddings(self):
         return self.model.lm_head
@@ -68,32 +52,75 @@ class DeutschA2Model(PreTrainedModel):
     def set_output_embeddings(self, new_embeddings):
         self.model.lm_head = new_embeddings
 
-    def tie_weights(self, *args, **kwargs):
-        super().tie_weights(*args, **kwargs)
-        if getattr(self.config, "weight_tying", True):
-            self.model.lm_head.weight = self.model.token_emb.weight
+    # ── Forward pass ─────────────────────────────────────────────────────────
 
-    def forward(self, input_ids, **kwargs):
-        return self.model(input_ids)
+    def forward(self, input_ids, labels=None, **kwargs):
+        """
+        Args:
+            input_ids: [batch, seq_len]
+            labels:    optional [batch, seq_len] for loss computation
 
-    def generate(self, input_ids, max_new_tokens=64, temperature=0.7, top_k=50):
+        Returns:
+            If labels provided: (loss, logits)
+            Otherwise:          logits  [batch, seq_len, vocab_size]
+        """
+        logits = self.model(input_ids)   # [B, T, vocab_size]
+
+        loss = None
+        if labels is not None:
+            # Shift so we predict next token
+            shift_logits = logits[..., :-1, :].contiguous()
+            shift_labels = labels[..., 1:].contiguous()
+            loss = F.cross_entropy(
+                shift_logits.view(-1, shift_logits.size(-1)),
+                shift_labels.view(-1),
+            )
+
+        if loss is not None:
+            return (loss, logits)
+        return logits
+
+    # ── Custom autoregressive generate (overrides HF generate) ───────────────
+
+    def generate(
+        self,
+        input_ids: torch.Tensor,
+        max_new_tokens: int = 64,
+        temperature: float = 0.7,
+        top_k: int = 50,
+        eos_token_id: int = 2,
+        **kwargs,
+    ) -> torch.Tensor:
+        """Autoregressive generation with temperature + top-k sampling.
+
+        Args:
+            input_ids:      [batch, prompt_len]
+            max_new_tokens: max tokens to generate
+            temperature:    sampling temperature
+            top_k:          top-k filtering (0 = disabled)
+            eos_token_id:   stop token (default 2 = <EOS>)
+
+        Returns:
+            [batch, prompt_len + generated_len]
+        """
         self.eval()
-        device = input_ids.device
-        
-        for _ in range(max_new_tokens):
-            idx_cond = input_ids if input_ids.size(1) <= self.model.max_seq_len else input_ids[:, -self.model.max_seq_len:]
-            logits = self.forward(idx_cond)
-            logits = logits[:, -1, :] / temperature
-            
-            if top_k > 0:
-                v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
-                logits[logits < v[:, [-1]]] = -float('Inf')
-            
-            probs = torch.softmax(logits, dim=-1)
-            next_token = torch.multinomial(probs, num_samples=1)
-            input_ids = torch.cat((input_ids, next_token), dim=1)
-            
-            if next_token.item() == 2: # <EOS>
-                break
-                
+        max_seq_len = self.model.max_seq_len
+
+        with torch.no_grad():
+            for _ in range(max_new_tokens):
+                idx_cond = input_ids[:, -max_seq_len:]
+                logits = self.model(idx_cond)         # [B, T, vocab_size]
+                logits = logits[:, -1, :] / temperature
+
+                if top_k > 0:
+                    v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
+                    logits[logits < v[:, [-1]]] = float("-inf")
+
+                probs = torch.softmax(logits, dim=-1)
+                next_token = torch.multinomial(probs, num_samples=1)
+                input_ids = torch.cat((input_ids, next_token), dim=1)
+
+                if next_token.item() == eos_token_id:
+                    break
+
         return input_ids

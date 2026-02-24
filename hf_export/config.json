@@ -1,19 +1,16 @@
 {
   "architectures": [
-    "DeutschA2Model"
+    "GPT2LMHeadModel"
   ],
   "vocab_size": 8000,
-  "max_seq_len": 64,
-  "hidden_size": 128,
-  "num_hidden_layers": 4,
-  "num_attention_heads": 4,
-  "intermediate_size": 512,
-  "model_type": "deutsch_a2_transformer",
+  "n_positions": 64,
+  "n_ctx": 64,
+  "n_embd": 128,
+  "n_layer": 4,
+  "n_head": 4,
+  "n_inner": 512,
+  "activation_function": "gelu_new",
+  "model_type": "gpt2",
   "torch_dtype": "float32",
-  "weight_tying": true,
-  "auto_map": {
-    "AutoConfig": "configuration_custom.DeutschA2Config",
-    "AutoModel": "modeling_custom.DeutschA2Model",
-    "AutoModelForCausalLM": "modeling_custom.DeutschA2Model"
-  }
+  "tie_word_embeddings": true
 }

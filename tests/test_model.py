@@ -42,7 +42,7 @@ def test_output_shape(model, config):
 
 def test_weight_tying(model):
     """Embedding and LM head must share the same weight tensor."""
-    assert model.token_emb.weight.data_ptr() == model.lm_head.weight.data_ptr()
+    assert model.transformer["wte"].weight.data_ptr() == model.lm_head.weight.data_ptr()
 
 
 def test_device_compatibility(config):

@@ -23,23 +23,20 @@ def export_to_hf(model_path=None, config_path=None, output_dir=None):
     with open(config_path, "r", encoding="utf-8") as f:
         config_data = yaml.safe_load(f)
 
-    # 1. Create config.json
+    # 1. Create config.json (standard GPT-2 format)
     hf_config = {
-        "architectures": ["DeutschA2Model"],
+        "architectures": ["GPT2LMHeadModel"],
         "vocab_size": config_data["model"]["vocab_size"],
-        "max_seq_len": config_data["model"]["max_seq_len"],
-        "hidden_size": config_data["model"]["d_model"],
-        "num_hidden_layers": config_data["model"]["n_layers"],
-        "num_attention_heads": config_data["model"]["n_heads"],
-        "intermediate_size": config_data["model"]["d_ff"],
-        "model_type": "deutsch_a2_transformer",
+        "n_positions": config_data["model"]["max_seq_len"],
+        "n_ctx": config_data["model"]["max_seq_len"],
+        "n_embd": config_data["model"]["d_model"],
+        "n_layer": config_data["model"]["n_layers"],
+        "n_head": config_data["model"]["n_heads"],
+        "n_inner": config_data["model"]["d_ff"],
+        "activation_function": "gelu_new",
+        "model_type": "gpt2",
         "torch_dtype": "float32",
-        "weight_tying": config_data["model"].get("weight_tying", True),
-        "auto_map": {
-            "AutoConfig": "configuration_custom.DeutschA2Config",
-            "AutoModel": "modeling_custom.DeutschA2Model",
-            "AutoModelForCausalLM": "modeling_custom.DeutschA2Model"
-        }
+        "tie_word_embeddings": config_data["model"].get("weight_tying", True),
     }
 
     config_out = output_dir / "config.json"
@@ -52,7 +49,7 @@ def export_to_hf(model_path=None, config_path=None, output_dir=None):
     checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)
     state_dict = checkpoint["model_state_dict"]
 
-    tensors = {f"model.{k}": v.cpu().clone().contiguous() for k, v in state_dict.items()}
+    tensors = {k: v.cpu().clone().contiguous() for k, v in state_dict.items()}
 
     safetensors_out = output_dir / "model.safetensors"
     save_file(tensors, safetensors_out)
