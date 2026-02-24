@@ -12,6 +12,7 @@ tags:
 - education
 - pytorch
 - gpt2
+inference: true
 widget:
 - text: "Ich habe den Auto."
   example_title: "Akkusativ correction"
