@@ -4,11 +4,13 @@ from transformers import AutoModelForCausalLM, PreTrainedTokenizerFast
 
 # Load model and tokenizer from the Hugging Face Hub
 repo_id = "kengurukleo/deutsch_a2_transformer"
-model = AutoModelForCausalLM.from_pretrained(repo_id, trust_remote_code=True)
-tokenizer = PreTrainedTokenizerFast.from_pretrained(repo_id, trust_remote_code=True)
+model = AutoModelForCausalLM.from_pretrained(repo_id)
+# Using PreTrainedTokenizerFast directly as it's a native GPT-2 tokenizer now
+from transformers import AutoTokenizer
+tokenizer = AutoTokenizer.from_pretrained(repo_id)
 
-bos_id = tokenizer.convert_tokens_to_ids("<BOS>")
-eos_id = tokenizer.convert_tokens_to_ids("<EOS>")
+bos_id = tokenizer.bos_token_id
+eos_id = tokenizer.eos_token_id
 
 
 def check_grammar(text: str) -> str:
@@ -20,8 +22,9 @@ def check_grammar(text: str) -> str:
 
     output_ids = model.generate(
         input_ids,
-        max_new_tokens=64,
+        max_length=64, # Total length including prompt must be <= 64
         eos_token_id=eos_id,
+        pad_token_id=eos_id, # Standard practice for GPT-2 without pad token
     )
 
     # Decode only the generated part (after the prompt)
