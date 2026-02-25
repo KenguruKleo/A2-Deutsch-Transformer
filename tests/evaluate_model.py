@@ -30,7 +30,7 @@ class TestDataset(Dataset):
 
     def __getitem__(self, idx):
         item = self.data[idx]
-        src_ids = self.tokenizer.encode(item['input'], add_bos=False, add_eos=True, max_len=self.max_len)
+        src_ids = self.tokenizer.encode(item['input'], add_bos=True, add_eos=True, max_len=self.max_len)
         src_ids = self.tokenizer.pad_sequence(src_ids, max_len=self.max_len)
         return torch.tensor(src_ids, dtype=torch.long), idx
 

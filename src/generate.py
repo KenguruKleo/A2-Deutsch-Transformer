@@ -37,9 +37,9 @@ def generate_response(text: str, model, tokenizer, device, max_len=64) -> str:
     """
     model.eval()
 
-    # Encode source: [tokens] + <EOS>  (no BOS for encoder)
+    # Encode source: <BOS> + [tokens] + <EOS>
     import torch
-    src_ids = tokenizer.encode(text, add_bos=False, add_eos=True, max_len=max_len)
+    src_ids = tokenizer.encode(text, add_bos=True, add_eos=True, max_len=max_len)
     input_ids = torch.tensor([src_ids], dtype=torch.long, device=device)
     attention_mask = (input_ids != tokenizer.pad_id).long()
 

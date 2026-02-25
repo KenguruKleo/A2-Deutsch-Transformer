@@ -52,9 +52,10 @@ class Seq2SeqDataset(Dataset):
     def __getitem__(self, idx):
         item = self.examples[idx]
 
-        # ── Encoder Input: [tokens] + <EOS> + <PAD>... ──
-        # The encoder sees the input sentence, terminated by EOS.
-        src_ids = self.tokenizer.encode(item['input'], add_bos=False, add_eos=True, max_len=self.max_len)
+        # ── Encoder Input: <BOS> + [tokens] + <EOS> + <PAD>... ──
+        # Standard HF pipeline tokenizer(text) adds BOS and EOS automatically.
+        # We set add_bos=True, add_eos=True to match this exact behavior so we can use natively
+        src_ids = self.tokenizer.encode(item['input'], add_bos=True, add_eos=True, max_len=self.max_len)
         attention_mask = [1] * len(src_ids) + [0] * (self.max_len - len(src_ids))
         src_ids = self.tokenizer.pad_sequence(src_ids, max_len=self.max_len)
 
