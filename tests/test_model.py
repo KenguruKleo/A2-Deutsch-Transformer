@@ -6,8 +6,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.model.model import TransformerModel
+from src.model.model import create_model
 from src.config import load_config
+from transformers import BartForConditionalGeneration
 
 
 @pytest.fixture(scope="module")
@@ -17,69 +18,58 @@ def config():
 
 @pytest.fixture(scope="module")
 def model(config):
-    return TransformerModel(
-        vocab_size=config.model.vocab_size,
-        max_seq_len=config.model.max_seq_len,
-        d_model=config.model.d_model,
-        n_heads=config.model.n_heads,
-        n_layers=config.model.n_layers,
-        d_ff=config.model.d_ff,
-        weight_tying=config.model.weight_tying,
-    )
+    # Create the model using the HF BART wrapper
+    # We pass tokenizer=None here, so it uses the raw config values
+    return create_model(config, tokenizer=None)
+
+
+def test_is_hf_model(model):
+    """Ensure the created model is a standard huggingface BartForConditionalGeneration."""
+    assert isinstance(model, BartForConditionalGeneration)
 
 
 def test_output_shape(model, config):
-    """Logits shape must be [batch, seq_len, vocab_size]."""
+    """
+    Logits shape must be [batch, seq_len, vocab_size]
+    when passing input_ids and decoder_input_ids to HF BART.
+    """
     v = config.model.vocab_size
     t = config.model.max_seq_len
     batch_size = 2
 
-    dummy_input = torch.randint(0, v, (batch_size, t))
-    logits = model(dummy_input)
+    dummy_src = torch.randint(0, v, (batch_size, t))
+    dummy_tgt = torch.randint(0, v, (batch_size, t))
+    
+    # HF BART returns a Seq2SeqLMOutput object
+    outputs = model(input_ids=dummy_src, decoder_input_ids=dummy_tgt)
+    logits = outputs.logits
 
     assert logits.shape == (batch_size, t, v)
 
 
 def test_weight_tying(model):
-    """Embedding and LM head must share the same weight tensor."""
-    assert model.transformer["wte"].weight.data_ptr() == model.lm_head.weight.data_ptr()
+    """
+    Embedding and LM head must share the same weight tensor,
+    which is standard practice in tie_word_embeddings=True.
+    """
+    # In HF BART:
+    # embed_tokens = model.model.shared.weight
+    # lm_head = model.lm_head.weight
+    assert model.model.shared.weight.data_ptr() == model.lm_head.weight.data_ptr()
 
 
-def test_device_compatibility(config):
-    """Model must run forward pass on the best available device."""
-    if torch.cuda.is_available():
-        device = "cuda"
-    elif torch.backends.mps.is_available():
-        device = "mps"
-    else:
-        device = "cpu"
-
-    v = config.model.vocab_size
-    t = config.model.max_seq_len
-
-    model = TransformerModel(
-        vocab_size=v,
-        max_seq_len=t,
-        d_model=config.model.d_model,
-        n_heads=config.model.n_heads,
-        n_layers=config.model.n_layers,
-        d_ff=config.model.d_ff,
-        weight_tying=config.model.weight_tying,
-    ).to(device)
-
-    dummy_input = torch.randint(0, v, (4, t)).to(device)
-    logits = model(dummy_input)
-
-    assert logits.shape == (4, t, v)
-
-
-def test_causal_mask_is_lower_triangular(model, config):
-    """Causal mask must block future tokens (lower-triangular structure)."""
-    t = config.model.max_seq_len
-    mask = model._create_causal_mask(t, device="cpu")
-
-    assert mask.shape == (1, 1, t, t)
-    # Upper triangle (above diagonal) must be 0
-    assert mask[0, 0].triu(diagonal=1).sum().item() == 0
-    # Diagonal and below must be all 1s
-    assert mask[0, 0].tril().sum().item() == t * (t + 1) / 2
+def test_config_mapping(model, config):
+    """Ensure the BartConfig matches our config.yaml params."""
+    assert model.config.vocab_size == config.model.vocab_size
+    assert model.config.d_model == config.model.d_model
+    assert model.config.encoder_layers == config.model.n_enc_layers
+    assert model.config.decoder_layers == config.model.n_dec_layers
+    assert model.config.encoder_attention_heads == config.model.n_heads
+    assert model.config.decoder_attention_heads == config.model.n_heads
+    assert model.config.encoder_ffn_dim == config.model.d_ff
+    assert model.config.decoder_ffn_dim == config.model.d_ff
+    assert model.config.max_position_embeddings == config.model.max_seq_len
+    
+    # Custom tweaks for our training logic
+    assert getattr(model.config, "scale_embedding", True) is False
+    assert model.config.tie_word_embeddings is True

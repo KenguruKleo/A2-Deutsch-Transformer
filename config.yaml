@@ -8,7 +8,6 @@ model:
   n_heads: 4 # H — attention heads
   d_ff: 512 # FFN hidden dimension
   weight_tying: true # tie embeddings and LM head
-  pos_type: "sinusoidal" # v2.0 uses sinusoidal PE
 
 training:
   batch_size: 64

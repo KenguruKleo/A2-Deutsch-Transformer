@@ -1,24 +1,37 @@
 """
-inference.py — Shared inference utilities for A2 Deutsch Grammar Tutor v2.0 (Encoder-Decoder).
+inference.py — Shared inference utilities for A2 Deutsch Grammar Tutor v2.1 (HF BART).
 
 Provides two reusable building blocks:
-  - load_model()         → loads tokenizer + model from checkpoint
-  - generate_response()  → autoregressive token generation (Seq2Seq style)
+  - load_model()         → loads tokenizer + HF BART model from directory
+  - generate_response()  → uses model.generate() for Seq2Seq inference
 """
 
 import torch
-import torch.nn.functional as F
 from pathlib import Path
+from transformers import BartForConditionalGeneration
 
 from src.config import Config, get_device, get_project_root
-from src.model.model import GrammarTransformer
 from src.tokenizer.tokenizer import Tokenizer
+
 
 def load_model(
     model_path: str | Path | None = None,
     config: Config | None = None,
-) -> tuple[GrammarTransformer, Tokenizer, str]:
-    """Load tokenizer and model from a checkpoint."""
+) -> tuple[BartForConditionalGeneration, Tokenizer, str]:
+    """
+    Load tokenizer and HF BART model from a saved directory.
+
+    The model directory should contain:
+      - config.json          (BartConfig — architecture params)
+      - model.safetensors    (weights: E, P, W_Q/K/V/O, W₁, W₂, LN per layer)
+
+    Args:
+        model_path: Path to model directory (default: project_root/model_final).
+        config: Optional Config for device selection.
+
+    Returns:
+        (model, tokenizer, device)
+    """
     from src.config import load_config
 
     if config is None:
@@ -26,54 +39,65 @@ def load_model(
 
     project_root = get_project_root()
     if model_path is None:
-        model_path = project_root / "model_final.pth"
+        model_path = project_root / "model_final"
+    model_path = Path(model_path)
 
     device = get_device(config.training.device)
     tokenizer = Tokenizer(project_root / "src/tokenizer/tokenizer.json")
 
-    # weights_only=False because of the custom arch marker
-    checkpoint = torch.load(model_path, map_location=device, weights_only=False)
-
-    model = GrammarTransformer(
-        vocab_size=config.model.vocab_size,
-        max_seq_len=config.model.max_seq_len,
-        d_model=config.model.d_model,
-        n_heads=config.model.n_heads,
-        n_enc_layers=config.model.n_enc_layers,
-        n_dec_layers=config.model.n_dec_layers,
-        d_ff=config.model.d_ff,
-    ).to(device)
-
-    model.load_state_dict(checkpoint["model_state_dict"])
+    # Load HF model directly — no manual state_dict manipulation needed
+    model = BartForConditionalGeneration.from_pretrained(str(model_path))
+    model = model.to(device)
     model.eval()
 
     return model, tokenizer, device
 
+
 def generate_response(
     text: str,
-    model: GrammarTransformer,
+    model: BartForConditionalGeneration,
     tokenizer: Tokenizer,
     config: Config,
     device: str,
     max_len: int = 64,
 ) -> str:
-    """Run autoregressive generation for v2.0 Seq2Seq model."""
+    """
+    Run grammar check using HF's model.generate().
+
+    Data flow:
+      text → encode → input_ids [1, T_src]
+           → Encoder → memory [1, T_src, d=256]
+           → Decoder (greedy) → output_ids [1, T_out]
+           → decode → response string
+
+    Args:
+        text: German sentence to check.
+        model: BartForConditionalGeneration in eval mode.
+        tokenizer: Tokenizer wrapper.
+        config: Config for max_seq_len.
+        device: Device string.
+        max_len: Maximum generation length.
+
+    Returns:
+        Grammar check result as string.
+    """
     model.eval()
-    
-    # Encode source text (Encoder Input)
+
+    # Encode source: [tokens] + <EOS>
     src_ids = tokenizer.encode(text, add_bos=False, add_eos=True, max_len=max_len)
-    src_tensor = torch.tensor([src_ids], dtype=torch.long, device=device)
-    
-    # Generate using model's autoregressive loop
+    input_ids = torch.tensor([src_ids], dtype=torch.long, device=device)
+    attention_mask = (input_ids != tokenizer.pad_id).long()
+
+    # Generate using HF standard pipeline
     with torch.no_grad():
-        generated_ids = model.generate(
-            src_tensor, 
-            bos_id=tokenizer.bos_id, 
-            eos_id=tokenizer.eos_id, 
-            pad_id=tokenizer.pad_id,
-            max_len=max_len
+        output_ids = model.generate(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            max_length=max_len,
+            num_beams=1,
+            do_sample=False,
         )
-    
-    # Decode result (remove BOS)
-    result = tokenizer.decode(generated_ids[0].tolist()[1:], skip_special=True)
+
+    # Decode result (skip <BOS>, <EOS>, <PAD>)
+    result = tokenizer.decode(output_ids[0].tolist(), skip_special=True)
     return result.strip()

@@ -3,3 +3,4 @@ transformers
 safetensors
 gradio
 huggingface_hub
+pyyaml
