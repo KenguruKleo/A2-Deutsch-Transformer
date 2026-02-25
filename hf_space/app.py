@@ -10,7 +10,7 @@ import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
 # ── 1. Load Model & Tokenizer (standard HF pipeline) ──
-MODEL_ID = "KenguruKleo/deutsch-a2-tutor-model"
+MODEL_ID = "kengurukleo/deutsch_a2_transformer"
 
 print(f"📥 Loading model from {MODEL_ID}...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
