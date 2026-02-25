@@ -32,15 +32,21 @@ def check_grammar(text: str) -> str:
     if not text.strip():
         return "Будь ласка, введіть німецьке речення."
 
-    # Tokenize (HF handles special tokens automatically)
-    inputs = tokenizer(text, return_tensors="pt", add_special_tokens=True)
+    # Manually add BOS and EOS — model was trained with explicit [BOS] ... [EOS]
+    bos_id = tokenizer.convert_tokens_to_ids("<BOS>")
+    eos_id = tokenizer.convert_tokens_to_ids("<EOS>")
+    token_ids = tokenizer.encode(text, add_special_tokens=False)
+    input_ids = torch.tensor([[bos_id] + token_ids + [eos_id]])
+    attention_mask = torch.ones_like(input_ids)
 
     with torch.no_grad():
         output_ids = model.generate(
-            **inputs,
+            input_ids=input_ids,
+            attention_mask=attention_mask,
             max_length=64,
             num_beams=1,
             do_sample=False,
+
         )
 
     result = tokenizer.decode(output_ids[0], skip_special_tokens=True)
