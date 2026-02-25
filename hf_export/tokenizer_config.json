@@ -5,5 +5,7 @@
   "model_max_length": 64,
   "pad_token": "<PAD>",
   "tokenizer_class": "PreTrainedTokenizerFast",
-  "unk_token": "<UNK>"
+  "unk_token": "<UNK>",
+  "add_bos_token": true,
+  "add_eos_token": true
 }

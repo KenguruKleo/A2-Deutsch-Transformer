@@ -43,6 +43,8 @@ def export_to_hf():
         pad_token="<PAD>",
         unk_token="<UNK>",
         model_max_length=config.model.max_seq_len,
+        add_bos_token=True,
+        add_eos_token=True,
     )
 
     print(f"📊 Model vocab: {model.config.vocab_size}, Tokenizer vocab: {len(hf_tokenizer)}")
@@ -67,6 +69,8 @@ def export_to_hf():
         t_config = json.load(f)
     t_config["tokenizer_class"] = "PreTrainedTokenizerFast"
     t_config["model_max_length"] = config.model.max_seq_len
+    t_config["add_bos_token"] = True
+    t_config["add_eos_token"] = True
     with open(config_path, "w", encoding="utf-8") as f:
         json.dump(t_config, f, indent=2, ensure_ascii=False)
 
