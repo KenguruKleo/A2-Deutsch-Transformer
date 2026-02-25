@@ -38,33 +38,6 @@
       "rstrip": false,
       "normalized": false,
       "special": true
-    },
-    {
-      "id": 8000,
-      "content": "</s>",
-      "single_word": false,
-      "lstrip": false,
-      "rstrip": false,
-      "normalized": false,
-      "special": true
-    },
-    {
-      "id": 8001,
-      "content": "<s>",
-      "single_word": false,
-      "lstrip": false,
-      "rstrip": false,
-      "normalized": false,
-      "special": true
-    },
-    {
-      "id": 8002,
-      "content": "<mask>",
-      "single_word": false,
-      "lstrip": false,
-      "rstrip": false,
-      "normalized": false,
-      "special": true
     }
   ],
   "normalizer": null,
@@ -75,17 +48,30 @@
     "use_regex": true
   },
   "post_processor": {
-    "type": "RobertaProcessing",
-    "sep": [
-      "</s>",
-      8000
+    "type": "TemplateProcessing",
+    "single": [
+      {
+        "Sequence": {
+          "id": "A",
+          "type_id": 0
+        }
+      }
     ],
-    "cls": [
-      "<s>",
-      8001
+    "pair": [
+      {
+        "Sequence": {
+          "id": "A",
+          "type_id": 0
+        }
+      },
+      {
+        "Sequence": {
+          "id": "B",
+          "type_id": 1
+        }
+      }
     ],
-    "trim_offsets": true,
-    "add_prefix_space": false
+    "special_tokens": {}
   },
   "decoder": {
     "type": "ByteLevel",
