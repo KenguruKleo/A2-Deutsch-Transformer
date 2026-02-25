@@ -45,7 +45,7 @@ For a complete list of examples and model explanations for each topic, see:
 ## Architecture
 
 ```
-Transformer Encoder-Decoder (v2.0) - BART-style architecture
+Transformer Encoder-Decoder (v2.2) - BART-style architecture
 ├── Tokenizer: Byte-level BPE, 8,000 tokens (HuggingFace tokenizers)
 ├── V = 8,003 tokens (including extra special tokens like <s>, </s>, <mask_token>)
 ├── T = 64  (max sequence length)
@@ -56,7 +56,7 @@ Transformer Encoder-Decoder (v2.0) - BART-style architecture
 ├── Weight tying = ON (shared weights between Encoder, Decoder, and LM Head)
 └── Precision = FP32 (Exported as Safetensors)
 
-Detailed mathematical description of the v2.0 architecture can be found in [docs/architecture_v2.md](docs/architecture_v2.md).
+Detailed mathematical description of the architecture can be found in [docs/architecture_v2.md](docs/architecture_v2.md).
 ```
 
 ## Release History
@@ -65,6 +65,8 @@ Detailed mathematical description of the v2.0 architecture can be found in [docs
 *   **v1.1 (BPE Tokenizer):** Migration to a Byte-level BPE tokenizer (8,000 tokens) for better handling of unknown words and improved performance.
 *   **v1.2 (Hugging Face Native):** Refactored to be a fully compatible **GPT-2** model.
 *   **v2.0 (Encoder-Decoder):** Major upgrade to a **BART-style** Encoder-Decoder architecture. Switched to Seq2Seq modeling, significantly improving the quality and logic of grammatical explanations. Optimized for the Hugging Face `text2text-generation` pipeline.
+*   **v2.1 (Tokenizer Alignment):** Enforced strict tokenizer–model vocabulary alignment; standardized BOS/EOS token handling across all training, inference, and export pipelines.
+*   **v2.2 (Export Streamline):** Removed custom HF model/config wrappers — model now exports directly as a native `BartForConditionalGeneration`. Simplified `export_hf.py`, switched to `PreTrainedTokenizerFast`, and stabilised the Gradio Space deploy workflow.
 
 ## Project Structure
 
@@ -72,29 +74,56 @@ Detailed mathematical description of the v2.0 architecture can be found in [docs
 A2-Deutsch-Transformer/
 ├── src/
 │   ├── model/
-│   │   ├── model.py                # Core Transformer architecture
-│   │   ├── configuration_custom.py # HF Config wrapper
-│   │   └── modeling_custom.py      # HF Model wrapper (custom code)
+│   │   └── model.py                # Core Transformer (BartForConditionalGeneration)
 │   ├── tokenizer/
 │   │   ├── train_tokenizer.py      # Trains BPE tokenizer (HF tokenizers library)
-│   │   ├── tokenizer.py            # BPE tokenizer wrapper (same API as v1.0)
-│   │   └── build_vocab.py          # Legacy word-level vocab builder (v1.0 only)
+│   │   ├── tokenizer.py            # BPE tokenizer wrapper
+│   │   └── tokenizer.json          # Cached trained tokenizer
 │   ├── data/
-│   │   ├── generator.py            # Main synthetic data generator
-│   │   └── generators/             # Specialized topic generators
+│   │   ├── generator.py            # Orchestrates synthetic data generation
+│   │   └── generators/             # Specialised topic generators
+│   │       ├── base.py             # BaseGenerator + shared helpers
+│   │       ├── cases.py            # Akkusativ, Dativ, Genitiv, Präpositionen…
+│   │       ├── syntax.py           # Inversion, Nebensätze, Separable verbs…
+│   │       └── verbs.py            # Präsens, Perfekt, Modal, Reflexive…
+│   ├── config.py                   # Loads & validates config.yaml
 │   ├── train.py                    # Training loop (device auto-detection)
 │   ├── inference.py                # Shared model loading and generation logic
 │   ├── generate.py                 # CLI inference script
-│   └── export_hf.py                # Hugging Face export script
-├── hf_export/                      # Bundle for HF Hub (weights + code)
-├── hf_space/                       # Bundle for HF Spaces (Gradio app)
+│   └── export_hf.py                # Exports model as native BART to hf_export/
+├── hf_export/                      # Bundle uploaded to HF Hub
+│   ├── model.safetensors           # Weights (FP32)
+│   ├── config.json                 # BartConfig
+│   ├── generation_config.json      # Beam-search / generation settings
+│   ├── tokenizer.json              # PreTrainedTokenizerFast definition
+│   ├── tokenizer_config.json       # Tokenizer metadata
+│   └── README.md                   # HF model card
+├── hf_space/                       # Bundle deployed to HF Spaces
+│   ├── app.py                      # Gradio interface
+│   └── requirements.txt            # Space-specific dependencies
+├── scripts/
+│   ├── eval_tokenizer.py           # Measures tokenizer quality metrics
+│   ├── export_hf_precommit.sh      # Pre-commit hook: auto-export before commit
+│   ├── upload_to_hf.py             # Upload hf_export/ to HF Hub
+│   ├── upload_space_to_hf.py       # Upload hf_space/ to HF Spaces
+│   └── restart_space.py            # Force-restart the HF Space via API
 ├── tests/
-│   ├── test_model.py              # Architecture and device tests
-│   ├── evaluate_model.py          # Full evaluation on 248 test examples
-│   └── test_data.json              # Hand-crafted test sentences per topic
-├── data/                           # Generated JSONL datasets
+│   ├── test_model.py               # Architecture and device tests (pytest)
+│   ├── evaluate_model.py           # Full evaluation on 248 test examples
+│   ├── test_data.json              # Hand-crafted test sentences per topic
+│   └── eval_results.json           # Latest evaluation output (auto-generated)
+├── .github/
+│   └── workflows/
+│       ├── push-to-hf.yml          # CI: push hf_export/ to HF Hub on main
+│       └── push-space-to-hf.yml    # CI: push hf_space/ to HF Spaces on main
+├── docs/                           # Architecture & grammar documentation
+│   ├── architecture_v2.md
+│   ├── tokenizer_metrics.md
+│   ├── topics_examples.md
+│   └── …
+├── data/                           # Generated JSONL datasets (train/val)
 ├── data_raw/                       # Raw PDF textbooks
-├── docs/                           # Architecture and grammar docs
+├── model_final/                    # Saved model checkpoint (after training)
 ├── config.yaml                     # Model & training hyperparameters
 ├── requirements.txt
 └── README.md
