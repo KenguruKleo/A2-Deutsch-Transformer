@@ -58,10 +58,5 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HG_TOKEN: ${{ secrets.HG_TOKEN }}
         run: |
-          TOKEN="${HF_TOKEN:-$HG_TOKEN}"
-          if [ -n "$TOKEN" ]; then
-            pip install huggingface_hub -q
-            python -c "from huggingface_hub import HfApi; import os; api = HfApi(token=os.environ.get('HF_TOKEN') or os.environ.get('HG_TOKEN')); api.restart_space(repo_id='kengurukleo/deutsch-a2-tutor'); print('Space restart requested.')"
-          else
-            echo "::notice::Skipping Space restart (no token)."
-          fi
+          pip install huggingface_hub -q
+          python scripts/restart_space.py
