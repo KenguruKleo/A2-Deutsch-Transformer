@@ -70,64 +70,19 @@ Detailed mathematical description of the architecture can be found in [docs/arch
 
 ## Project Structure
 
-```text
-A2-Deutsch-Transformer/
-├── src/
-│   ├── model/
-│   │   └── model.py                # Core Transformer (BartForConditionalGeneration)
-│   ├── tokenizer/
-│   │   ├── train_tokenizer.py      # Trains BPE tokenizer (HF tokenizers library)
-│   │   ├── tokenizer.py            # BPE tokenizer wrapper
-│   │   └── tokenizer.json          # Cached trained tokenizer
-│   ├── data/
-│   │   ├── generator.py            # Orchestrates synthetic data generation
-│   │   └── generators/             # Specialised topic generators
-│   │       ├── base.py             # BaseGenerator + shared helpers
-│   │       ├── cases.py            # Akkusativ, Dativ, Genitiv, Präpositionen…
-│   │       ├── syntax.py           # Inversion, Nebensätze, Separable verbs…
-│   │       └── verbs.py            # Präsens, Perfekt, Modal, Reflexive…
-│   ├── config.py                   # Loads & validates config.yaml
-│   ├── train.py                    # Training loop (device auto-detection)
-│   ├── inference.py                # Shared model loading and generation logic
-│   ├── generate.py                 # CLI inference script
-│   └── export_hf.py                # Exports model as native BART to hf_export/
-├── hf_export/                      # Bundle uploaded to HF Hub
-│   ├── model.safetensors           # Weights (FP32)
-│   ├── config.json                 # BartConfig
-│   ├── generation_config.json      # Beam-search / generation settings
-│   ├── tokenizer.json              # PreTrainedTokenizerFast definition
-│   ├── tokenizer_config.json       # Tokenizer metadata
-│   └── README.md                   # HF model card
-├── hf_space/                       # Bundle deployed to HF Spaces
-│   ├── app.py                      # Gradio interface
-│   └── requirements.txt            # Space-specific dependencies
-├── scripts/
-│   ├── eval_tokenizer.py           # Measures tokenizer quality metrics
-│   ├── export_hf_precommit.sh      # Pre-commit hook: auto-export before commit
-│   ├── upload_to_hf.py             # Upload hf_export/ to HF Hub
-│   ├── upload_space_to_hf.py       # Upload hf_space/ to HF Spaces
-│   └── restart_space.py            # Force-restart the HF Space via API
-├── tests/
-│   ├── test_model.py               # Architecture and device tests (pytest)
-│   ├── evaluate_model.py           # Full evaluation on 248 test examples
-│   ├── test_data.json              # Hand-crafted test sentences per topic
-│   └── eval_results.json           # Latest evaluation output (auto-generated)
-├── .github/
-│   └── workflows/
-│       ├── push-to-hf.yml          # CI: push hf_export/ to HF Hub on main
-│       └── push-space-to-hf.yml    # CI: push hf_space/ to HF Spaces on main
-├── docs/                           # Architecture & grammar documentation
-│   ├── architecture_v2.md
-│   ├── tokenizer_metrics.md
-│   ├── topics_examples.md
-│   └── …
-├── data/                           # Generated JSONL datasets (train/val)
-├── data_raw/                       # Raw PDF textbooks
-├── model_final/                    # Saved model checkpoint (after training)
-├── config.yaml                     # Model & training hyperparameters
-├── requirements.txt
-└── README.md
-```
+👉 **[Full annotated structure → docs/project_structure.md](docs/project_structure.md)**
+
+| Directory / File | Purpose |
+|---|---|
+| `src/` | All source code: model, tokenizer, data generators, training, inference, export |
+| `src/data/generators/` | Specialised grammar generators (`cases.py`, `syntax.py`, `verbs.py`) — the main source of synthetic training data |
+| `hf_export/` | Ready-to-upload bundle for HF Hub: `model.safetensors`, `config.json`, tokenizer files |
+| `hf_space/` | Gradio app (`app.py`) deployed to HF Spaces |
+| `scripts/` | Utility scripts: tokenizer eval, HF upload, Space restart, pre-commit hook |
+| `tests/` | Pytest unit tests + 248-example evaluation harness |
+| `.github/workflows/` | CI: auto-push model and Space to Hugging Face on merge to `main` |
+| `docs/` | Architecture docs, tokenizer metrics, grammar topic examples |
+| `config.yaml` | All hyperparameters (model size, training settings, paths) |
 
 ## How It Works
 
