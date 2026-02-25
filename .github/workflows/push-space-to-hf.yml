@@ -52,7 +52,6 @@ jobs:
           python scripts/upload_space_to_hf.py
 
       - name: Restart Space
-        if: steps.check.outputs.exists == 'true'
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HG_TOKEN: ${{ secrets.HG_TOKEN }}
