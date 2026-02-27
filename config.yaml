@@ -18,8 +18,8 @@ training:
   device: "auto" # "auto" = best of cuda/xpu/mps/cpu, or set "cuda"|"xpu"|"mps"|"cpu"
 
 data:
-  train_path: "data/train.jsonl"
-  val_path: "data/val.jsonl"
+  train_path: "data/train_v2.jsonl"
+  val_split: 0.1
 
 generation:
   temperature: 0.3

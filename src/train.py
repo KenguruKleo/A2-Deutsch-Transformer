@@ -31,20 +31,16 @@ class Seq2SeqDataset(Dataset):
     Dataset for Encoder-Decoder (Seq2Seq) training.
 
     Each example produces:
-      - src_ids:          [tok₁, tok₂, ..., <EOS>, <PAD>, ...]     → Encoder input
-      - attention_mask:   [1, 1, ..., 1, 0, ...]                   → Encoder mask (1=real, 0=pad)
-      - decoder_input_ids: [<BOS>, tok₁, tok₂, ..., <PAD>, ...]   → Decoder input (teacher forcing)
-      - labels:           [tok₁, tok₂, ..., <EOS>, -100, ...]     → Target (shifted, -100=ignore)
+      - src_ids:           [tok₁, tok₂, ..., <EOS>, <PAD>, ...]    → Encoder input
+      - attention_mask:    [1, 1, ..., 1, 0, ...]                   → Encoder mask (1=real, 0=pad)
+      - decoder_input_ids: [<BOS>, tok₁, tok₂, ..., <PAD>, ...]    → Decoder input (teacher forcing)
+      - labels:            [tok₁, tok₂, ..., <EOS>, -100, ...]     → Target (shifted, -100=ignore)
     """
-    def __init__(self, data_path, tokenizer, max_len, pad_id):
+    def __init__(self, examples: list[dict], tokenizer, max_len, pad_id):
         self.tokenizer = tokenizer
         self.max_len = max_len
         self.pad_id = pad_id
-        self.examples = []
-
-        with open(data_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                self.examples.append(json.loads(line))
+        self.examples = examples
 
     def __len__(self):
         return len(self.examples)
@@ -119,9 +115,26 @@ def train():
         if args.continue_train:
             print(f"⚠️  {save_dir} not found. Starting from scratch.")
 
-    # ── 5. Prepare Data ──
-    train_ds = Seq2SeqDataset(config.data.train_path, tokenizer, config.model.max_seq_len, tokenizer.pad_id)
-    validation_ds = Seq2SeqDataset(config.data.val_path, tokenizer, config.model.max_seq_len, tokenizer.pad_id)
+    # ── 5. Prepare Data ── (single file, reproducible 90/10 split)
+    data_path = project_root / config.data.train_path
+    print(f"📂 Loading data from {data_path}")
+    all_examples = []
+    with open(data_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                all_examples.append(json.loads(line))
+
+    import random
+    rng = random.Random(42)  # fixed seed — same split every run
+    rng.shuffle(all_examples)
+    split_idx = int(len(all_examples) * (1 - config.data.val_split))
+    train_examples = all_examples[:split_idx]
+    val_examples = all_examples[split_idx:]
+    print(f"   Train: {len(train_examples):,}  |  Val: {len(val_examples):,} examples")
+
+    train_ds = Seq2SeqDataset(train_examples, tokenizer, config.model.max_seq_len, tokenizer.pad_id)
+    validation_ds = Seq2SeqDataset(val_examples, tokenizer, config.model.max_seq_len, tokenizer.pad_id)
 
     train_loader = DataLoader(train_ds, batch_size=config.training.batch_size, shuffle=True)
     validation_loader = DataLoader(validation_ds, batch_size=config.training.batch_size)

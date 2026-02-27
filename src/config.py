@@ -66,7 +66,7 @@ class TrainingConfig:
 @dataclass
 class DataConfig:
     train_path: str
-    val_path: str
+    val_split: float = 0.1
 
 
 @dataclass
