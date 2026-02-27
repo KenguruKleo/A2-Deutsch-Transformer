@@ -1,15 +1,11 @@
 {
-  "add_prefix_space": false,
   "backend": "tokenizers",
   "bos_token": "<BOS>",
-  "cls_token": "<s>",
   "eos_token": "<EOS>",
-  "errors": "replace",
-  "mask_token": "<mask>",
   "model_max_length": 64,
   "pad_token": "<PAD>",
-  "sep_token": "</s>",
-  "tokenizer_class": "BartTokenizer",
-  "trim_offsets": true,
-  "unk_token": "<UNK>"
+  "tokenizer_class": "PreTrainedTokenizerFast",
+  "unk_token": "<UNK>",
+  "add_bos_token": true,
+  "add_eos_token": true
 }

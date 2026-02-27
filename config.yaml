@@ -8,7 +8,6 @@ model:
   n_heads: 4 # H — attention heads
   d_ff: 512 # FFN hidden dimension
   weight_tying: true # tie embeddings and LM head
-  pos_type: "sinusoidal" # v2.0 uses sinusoidal PE
 
 training:
   batch_size: 64
@@ -20,21 +19,8 @@ training:
 
 data:
   train_path: "data/train.jsonl"
-  val_split: 0.1 # fraction held out for validation (handled by HF datasets)
+  val_path: "data/val.jsonl"
 
 generation:
   temperature: 0.3
   top_k: 50
-
-ollama:
-  host: "http://localhost:11434"
-  model: "hf.co/Qwen/Qwen3-4B-GGUF:Q4_K_M"
-  ratio_incorrect: 0.6 # 60% incorrect, 40% correct examples
-  timeout_seconds: 90
-  max_retries: 3
-
-openai:
-  base_url: "https://api.openai.com/v1" # override for LM Studio / local proxy
-  model: "gpt-4o-mini"
-  temperature: 0.7
-  max_tokens: 512

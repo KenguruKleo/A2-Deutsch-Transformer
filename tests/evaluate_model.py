@@ -1,5 +1,5 @@
 """
-Evaluation script for A2 Deutsch Grammar Tutor v2.0 (Batch Optimized).
+Evaluation script for A2 Deutsch Grammar Tutor v2.1 (HF BART).
 Evaluates Detection & Correction accuracy with beautiful formatting and high speed.
 """
 
@@ -10,13 +10,13 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from pathlib import Path
 from collections import defaultdict
+from transformers import BartForConditionalGeneration
 
 # Add project root to sys.path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
 from src.config import load_config, get_device
-from src.model.model import GrammarTransformer
 from src.tokenizer.tokenizer import Tokenizer
 
 class TestDataset(Dataset):
@@ -30,7 +30,7 @@ class TestDataset(Dataset):
 
     def __getitem__(self, idx):
         item = self.data[idx]
-        src_ids = self.tokenizer.encode(item['input'], add_bos=False, add_eos=True, max_len=self.max_len)
+        src_ids = self.tokenizer.encode(item['input'], add_bos=True, add_eos=True, max_len=self.max_len)
         src_ids = self.tokenizer.pad_sequence(src_ids, max_len=self.max_len)
         return torch.tensor(src_ids, dtype=torch.long), idx
 
@@ -49,23 +49,18 @@ def parse_output(response):
                 break
     return detected_correct, detected_incorrect, correction
 
-def evaluate(model_path="model_final.pth", batch_size=64, verbose=False):
+def evaluate(model_path="model_final", batch_size=64, verbose=False):
     config = load_config()
     device = get_device("auto")
     tokenizer = Tokenizer(project_root / "src/tokenizer/tokenizer.json")
     
-    model = GrammarTransformer(
-        vocab_size=config.model.vocab_size,
-        max_seq_len=config.model.max_seq_len,
-        d_model=config.model.d_model,
-        n_heads=config.model.n_heads,
-        n_enc_layers=config.model.n_enc_layers,
-        n_dec_layers=config.model.n_dec_layers,
-        d_ff=config.model.d_ff,
-    ).to(device)
+    model_dir = project_root / model_path
+    if not model_dir.exists() and not (model_dir / "config.json").exists():
+        print(f"❌ Model missing at {model_dir}")
+        return
 
-    checkpoint = torch.load(project_root / model_path, map_location=device, weights_only=False)
-    model.load_state_dict(checkpoint["model_state_dict"])
+    model = BartForConditionalGeneration.from_pretrained(str(model_dir))
+    model = model.to(device)
     model.eval()
 
     with open(project_root / "tests/test_data.json", 'r', encoding='utf-8') as f:
@@ -75,7 +70,7 @@ def evaluate(model_path="model_final.pth", batch_size=64, verbose=False):
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
     print(f"\n{'='*80}")
-    print(f"🧪 A2 Deutsch Grammar Tutor v2.0 — Batch Evaluation (BS={batch_size})")
+    print(f"🧪 A2 Deutsch Grammar Tutor (HF BART) — Batch Evaluation (BS={batch_size})")
     print(f"{'='*80}")
     
     results = [None] * len(test_data)
@@ -83,16 +78,19 @@ def evaluate(model_path="model_final.pth", batch_size=64, verbose=False):
     with torch.no_grad():
         for batch_src, indices in loader:
             batch_src = batch_src.to(device)
+            attention_mask = (batch_src != tokenizer.pad_id).long()
+            
             # Batch generate
             generated_ids = model.generate(
-                batch_src, 
-                bos_id=tokenizer.bos_id, 
-                eos_id=tokenizer.eos_id, 
-                max_len=config.model.max_seq_len
+                input_ids=batch_src,
+                attention_mask=attention_mask,
+                max_length=config.model.max_seq_len,
+                num_beams=1,
+                do_sample=False
             )
             
             for i, idx in enumerate(indices):
-                response = tokenizer.decode(generated_ids[i].tolist()[1:], skip_special=True)
+                response = tokenizer.decode(generated_ids[i].tolist(), skip_special=True)
                 test_item = test_data[idx]
                 
                 det_c, det_inc, corr = parse_output(response)
@@ -174,7 +172,7 @@ def evaluate(model_path="model_final.pth", batch_size=64, verbose=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch_size", type=int, default=64)
-    parser.add_argument("--model", type=str, default="model_final.pth")
+    parser.add_argument("--model", type=str, default="model_final")
     parser.add_argument("--verbose", action="store_true", help="Show detailed failure summary")
     args = parser.parse_args()
     evaluate(model_path=args.model, batch_size=args.batch_size, verbose=args.verbose)

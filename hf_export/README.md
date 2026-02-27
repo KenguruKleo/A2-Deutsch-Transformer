@@ -1,8 +1,9 @@
+---
 language:
 - de
 - uk
 license: mit
-pipeline_tag: text2text-generation
+pipeline_tag: text-generation
 tags:
 - grammar
 - german

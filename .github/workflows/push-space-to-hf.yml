@@ -7,6 +7,7 @@ on:
     branches: [main]
     paths:
       - 'hf_space/**'
+      - 'hf_export/**'
       - '.github/workflows/push-space-to-hf.yml'
   workflow_dispatch:
 
@@ -49,3 +50,11 @@ jobs:
           export TOKEN
           pip install huggingface_hub -q
           python scripts/upload_space_to_hf.py
+
+      - name: Restart Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HG_TOKEN: ${{ secrets.HG_TOKEN }}
+        run: |
+          pip install huggingface_hub -q
+          python scripts/restart_space.py

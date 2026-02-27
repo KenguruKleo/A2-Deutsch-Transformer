@@ -1,4 +1,6 @@
-# Roadmap: v2.0 — Encoder-Decoder + SentencePiece
+> ✅ **Роадмап виконано.** Цей файл фіксує план переходу v1.0 → v2.0. Всі пункти виконані: SentencePiece/BPE токенізатор, Encoder-Decoder архітектура, повний HF BART експорт запущені в v2.2. Актуальний стан: README [→ Release History](../README.md#release-history).
+
+# Roadmap: v2.0 — Encoder-Decoder + SentencePiece (✅ виконано)
 
 ## Поточний стан (v1.0)
 
