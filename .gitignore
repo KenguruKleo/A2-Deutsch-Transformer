@@ -24,9 +24,6 @@ checkpoints/
 *.pt
 *.bin
 
-# Data (generated)
-data/*.jsonl
-
 # OS
 .DS_Store
 Thumbs.db
@@ -40,3 +37,6 @@ tests/eval_results.json
 
 # Type checker cache
 .pyright/
+
+# Local environment variables (API keys — never commit)
+.env

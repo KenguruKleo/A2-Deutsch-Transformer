@@ -56,7 +56,8 @@ Transformer Encoder-Decoder (v2.0) - BART-style architecture
 ├── Weight tying = ON (shared weights between Encoder, Decoder, and LM Head)
 └── Precision = FP32 (Exported as Safetensors)
 
-Detailed mathematical description of the v2.0 architecture can be found in [docs/architecture_v2.md](docs/architecture_v2.md).
+Detailed mathematical description of the v2.0 architecture: [docs/architecture_v2.md](docs/architecture_v2.md)
+v3.0 LLM-backed data pipeline architecture: [docs/architecture_v3.md](docs/architecture_v3.md)
 ```
 
 ## Release History
@@ -65,6 +66,7 @@ Detailed mathematical description of the v2.0 architecture can be found in [docs
 *   **v1.1 (BPE Tokenizer):** Migration to a Byte-level BPE tokenizer (8,000 tokens) for better handling of unknown words and improved performance.
 *   **v1.2 (Hugging Face Native):** Refactored to be a fully compatible **GPT-2** model.
 *   **v2.0 (Encoder-Decoder):** Major upgrade to a **BART-style** Encoder-Decoder architecture. Switched to Seq2Seq modeling, significantly improving the quality and logic of grammatical explanations. Optimized for the Hugging Face `text2text-generation` pipeline.
+*   **v3.0 (LLM-backed Data):** Replaced the hardcoded template generator with an **Ollama/OpenAI-powered generator** that produces diverse, realistic training examples via a pluggable `BaseLLMProvider` abstraction. Training data is now a single `data/train.jsonl` file; train/val split is handled automatically by HuggingFace `datasets`. See [docs/architecture_v3.md](docs/architecture_v3.md) for details.
 
 ## Project Structure
 
@@ -77,12 +79,19 @@ A2-Deutsch-Transformer/
 │   │   └── modeling_custom.py      # HF Model wrapper (custom code)
 │   ├── tokenizer/
 │   │   ├── train_tokenizer.py      # Trains BPE tokenizer (HF tokenizers library)
-│   │   ├── tokenizer.py            # BPE tokenizer wrapper (same API as v1.0)
+│   │   ├── tokenizer.py            # BPE tokenizer wrapper
 │   │   └── build_vocab.py          # Legacy word-level vocab builder (v1.0 only)
 │   ├── data/
-│   │   ├── generator.py            # Main synthetic data generator
-│   │   └── generators/             # Specialized topic generators
-│   ├── train.py                    # Training loop (device auto-detection)
+│   │   ├── llm_provider.py         # BaseLLMProvider ABC
+│   │   ├── providers/
+│   │   │   ├── ollama.py           # OllamaProvider (local Ollama instance)
+│   │   │   └── openai.py           # OpenAIProvider (OpenAI / LM Studio / any OpenAI-compat API)
+│   │   ├── llm_generator.py        # LLMGenerator — orchestrates generation + retry
+│   │   ├── llm_prompts.py          # Prompt templates for 20 grammar topics
+│   │   ├── generate_data.py        # CLI: generate training data (--provider ollama|openai)
+│   │   ├── validate_dataset.py     # Dataset validation, dedup, statistics
+│   │   └── generator.py            # Legacy template generator (v2.0, kept for reference)
+│   ├── train.py                    # Training loop (HF datasets for train/val split)
 │   ├── inference.py                # Shared model loading and generation logic
 │   ├── generate.py                 # CLI inference script
 │   └── export_hf.py                # Hugging Face export script
@@ -90,12 +99,16 @@ A2-Deutsch-Transformer/
 ├── hf_space/                       # Bundle for HF Spaces (Gradio app)
 ├── tests/
 │   ├── test_model.py              # Architecture and device tests
+│   ├── test_llm_generator.py      # Generator + provider abstraction unit tests
 │   ├── evaluate_model.py          # Full evaluation on 248 test examples
 │   └── test_data.json              # Hand-crafted test sentences per topic
-├── data/                           # Generated JSONL datasets
+├── data/                           # Generated JSONL dataset
 ├── data_raw/                       # Raw PDF textbooks
 ├── docs/                           # Architecture and grammar docs
-├── config.yaml                     # Model & training hyperparameters
+│   ├── architecture_v3.md          # v3.0 LLM-backed data pipeline
+│   ├── architecture_v2.md          # v2.0 Encoder-Decoder math
+│   └── ...                         # Other docs
+├── config.yaml                     # Model, training & LLM provider config
 ├── requirements.txt
 └── README.md
 ```
@@ -107,11 +120,11 @@ Trains a **Byte-level BPE** tokenizer on the project data. Reads all `input`/`ou
 
 To measure tokenizer quality after training: `python scripts/eval_tokenizer.py` — see **[Tokenizer Metrics](docs/tokenizer_metrics.md)** for full description of fertility, UNK rate, continuation rate, and sequence length metrics.
 
-### 2. `generator.py`
-Generates thousands of training examples. It knows grammar rules, takes a correct sentence and intentionally "breaks" it (e.g., changes word order or auxiliary verb), adding an explanation of why it is an error.
+### 2. `generate_data.py`  
+Generates training examples by calling a **local Ollama LLM** (default) or any **OpenAI-compatible API**. For each example it randomly picks a grammar topic and mode (`incorrect` / `correct`), builds a structured prompt, and validates the response. Supports resumable generation via `--append` — safe to interrupt with Ctrl+C.
 
 ### 3. Training
-The model is trained locally with **automatic device selection**: the best available backend is chosen from **CUDA** (NVIDIA/AMD), **XPU** (Intel), **MPS** (Apple Silicon), or **CPU** (see `config.yaml` → `training.device: "auto"`). Due to its small size (2.5 MB), training takes only a few minutes.
+The model is trained locally with **automatic device selection**: the best available backend is chosen from **CUDA** (NVIDIA/AMD), **XPU** (Intel), **MPS** (Apple Silicon), or **CPU** (see `config.yaml` → `training.device: "auto"`). Train/val split is handled automatically by HuggingFace `datasets` based on `config.yaml` → `data.val_split`.
 
 ## Installation & Setup
 
@@ -132,7 +145,14 @@ source .venv/bin/activate  # On macOS/Linux
 # 4. Install dependencies
 pip install --upgrade pip
 pip install -r requirements.txt
+
+# 5. (Optional) Create a .env file for OpenAI API key
+# Copy the example and fill in your key — this file is gitignored
+cp .env.example .env
+# Then edit .env and set: OPENAI_API_KEY=sk-...
 ```
+
+> **API Keys**: The OpenAI provider reads `OPENAI_API_KEY` from the environment or from a `.env` file in the project root (loaded via [`python-dotenv`](https://github.com/theskumar/python-dotenv)). The `.env` file is listed in `.gitignore` — never commit it. Real environment variables always take precedence over `.env`.
 
 ## Testing
 
@@ -160,24 +180,32 @@ pyright src/ tests/
 Once the environment is set up and activated:
 
 ```bash
-# 1. Generate training data (also retrains the BPE tokenizer automatically)
-python src/data/generator.py
+# 1. Generate training data with local Ollama (appends to data/train.jsonl, safe to interrupt)
+python -m src.data.generate_data --count 5000
 
-# 1a. Or retrain tokenizer separately (after manual data changes)
+# 1a. Continue / append to an existing file after interruption
+python -m src.data.generate_data --count 2000 --append
+
+# 1b. Use OpenAI instead — API key from .env or shell environment
+# echo 'OPENAI_API_KEY=sk-...' >> .env
+python -m src.data.generate_data --count 5000 --provider openai
+
+# 1c. Validate the generated dataset
+python -m src.data.validate_dataset --input data/train.jsonl
+
+# 2. Retrain the BPE tokenizer on new data (required before training)
 python src/tokenizer/train_tokenizer.py
 
-# 3. Run training
+# 3. Run training (train/val split handled automatically via HF datasets)
 python src/train.py
 
 # Advanced training options:
 python src/train.py --epochs 30          # Override epochs from config.yaml
 python src/train.py --continue          # Resume training from existing model_final.pth
-python src/train.py --continue --epochs 5 # Load last model and train for 5 more epochs
+python src/train.py --continue --epochs 5
 
 # 4. Test the model
 python -m src.generate --text "Ich habe nach Berlin gefahren."
-# or directly:
-python src/generate.py --text "Ich habe nach Berlin gefahren."
 
 # 5. Export to Hugging Face format
 python src/export_hf.py

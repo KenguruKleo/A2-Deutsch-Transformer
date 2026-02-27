@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
-import json
 from pathlib import Path
 from tqdm import tqdm
 from src.model.model import GrammarTransformer
@@ -12,15 +11,14 @@ class Seq2SeqDataset(Dataset):
     """
     Dataset for v2.0 Encoder-Decoder (Seq2Seq).
     Returns (src_ids, tgt_ids, label_ids).
+
+    Accepts a list of dicts with 'input' and 'output' keys
+    (as returned by HuggingFace datasets after a train_test_split).
     """
-    def __init__(self, data_path, tokenizer, max_len):
+    def __init__(self, examples: list[dict], tokenizer, max_len):
         self.tokenizer = tokenizer
         self.max_len = max_len
-        self.examples = []
-        
-        with open(data_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                self.examples.append(json.loads(line))
+        self.examples = examples
 
     def __len__(self):
         return len(self.examples)
@@ -105,9 +103,21 @@ def train():
         else:
             print(f"⚠️  {checkpoint_path} not found. Starting from scratch.")
 
-    # 5. Prepare Data
-    train_ds = Seq2SeqDataset(config.data.train_path, tokenizer, config.model.max_seq_len)
-    validation_ds = Seq2SeqDataset(config.data.val_path, tokenizer, config.model.max_seq_len)
+    # 5. Load Data via HuggingFace Datasets (automatic shuffle + train/val split)
+    from datasets import load_dataset  # noqa: PLC0415
+    project_root = get_project_root()
+    train_path = str(project_root / config.data.train_path)
+    print(f"📂 Loading data from {train_path}")
+    full_dataset = load_dataset("json", data_files=train_path, split="train")
+    splits = full_dataset.train_test_split(
+        test_size=config.data.val_split,
+        seed=42,
+        shuffle=True,
+    )
+    print(f"   Train: {len(splits['train']):,}  |  Val: {len(splits['test']):,} examples")
+
+    train_ds = Seq2SeqDataset(list(splits["train"]), tokenizer, config.model.max_seq_len)
+    validation_ds = Seq2SeqDataset(list(splits["test"]), tokenizer, config.model.max_seq_len)
     
     train_loader = DataLoader(train_ds, batch_size=config.training.batch_size, shuffle=True)
     validation_loader = DataLoader(validation_ds, batch_size=config.training.batch_size)
